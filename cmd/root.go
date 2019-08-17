@@ -22,7 +22,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// Execute main interface of bget
+// Execute main interface of butils
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		if !rootCmd.HasFlags() && !rootCmd.HasSubCommands() {
@@ -38,7 +38,7 @@ func init() {
 	rootCmd.AddCommand(ncbiCmd)
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "", false, "No log output.")
 
-	rootCmd.Example = `  bquery -d pubmed -q B-ALL -t XML -e your_email@domain.com`
+	rootCmd.Example = `  bquery ncbi -d pubmed -q B-ALL -t XML -e your_email@domain.com`
 
 	rootCmd.Version = version
 }

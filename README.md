@@ -21,7 +21,7 @@ Usage:
   bquery [command]
 
 Examples:
-  bquery -d pubmed -q B-ALL -t XML -e your_email@domain.com
+  bquery ncbi -d pubmed -q B-ALL -t XML -e your_email@domain.com
 
 Available Commands:
   help        Help about any command

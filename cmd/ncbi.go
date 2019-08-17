@@ -112,7 +112,7 @@ func ncbiQuery() {
 			}
 			_bn, err = io.Copy(buf, r)
 			io.Copy(buf, io.Reader(strings.NewReader("\n")))
-			bn += _bn
+			bn += _bn + 1
 			r.Close()
 			if err == nil {
 				break
