@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/JhuangLab/butils/log"
-	"github.com/JhuangLab/butils/utils"
+	butils "github.com/JhuangLab/butils"
 	"github.com/biogo/ncbi"
 	"github.com/biogo/ncbi/entrez"
 	"github.com/spf13/cobra"
@@ -52,8 +52,8 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 	} else {
 		log.SetOutput(os.Stderr)
 	}
-	if hasDir, _ := utils.PathExists(outfn); outfn != "" && !hasDir {
-		if err := utils.CreateDir(path.Dir(outfn)); err != nil {
+	if hasDir, _ := butils.PathExists(outfn); outfn != "" && !hasDir {
+		if err := butils.CreateDir(path.Dir(outfn)); err != nil {
 			log.FATAL(fmt.Sprintf("Could not to create %s", path.Dir(outfn)))
 		}
 	}
