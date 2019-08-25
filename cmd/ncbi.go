@@ -1,18 +1,15 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/JhuangLab/bquery/parse"
+	"github.com/JhuangLab/bquery/query"
 	butils "github.com/JhuangLab/butils"
 	"github.com/JhuangLab/butils/log"
-	"github.com/biogo/ncbi"
-	"github.com/biogo/ncbi/entrez"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +52,7 @@ func init() {
   
   k="algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org, RNA-Seq, DNA, profile, landscape"
   echo "[" > final.json
-  bquery ncbi --xml2json abstract.http.XML.tmp1* -k "${k}"| sed 's/}{/},{/g' >> final.json
+  bquery ncbi --xml2json abstract.http.XML.tmp* -k "${k}"| sed 's/}{/},{/g' >> final.json
   echo "]" >> final.json`
 }
 
@@ -71,7 +68,7 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 		}
 	}
 	if email != "" && clQuery != "" {
-		ncbiQuery()
+		query.Ncbi(db, clQuery, email, outfn, rettype, retmax, retries)
 		helpFlags = false
 	}
 	if xml2json {
@@ -84,73 +81,5 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 	}
 	if helpFlags {
 		cmd.Help()
-	}
-}
-
-// modified from https://github.com/biogo/ncbi BSD license
-func ncbiQuery() {
-	ncbi.SetTimeout(0)
-	tool := "entrez.example"
-	h := entrez.History{}
-	s, err := entrez.DoSearch(db, clQuery, nil, &h, tool, email)
-	if err != nil {
-		log.Fatalf("error: %v\n", err)
-	}
-	log.Infof("Will retrieve %d records.", s.Count)
-
-	var of *os.File
-	if outfn == "" {
-		of = os.Stdout
-	} else {
-		of, err = os.Create(outfn)
-		if err != nil {
-			log.Fatalf("error: %v", err)
-		}
-		defer of.Close()
-	}
-
-	var (
-		buf   = &bytes.Buffer{}
-		p     = &entrez.Parameters{RetMax: retmax, RetType: rettype, RetMode: "text"}
-		bn, n int64
-	)
-	for p.RetStart = 0; p.RetStart < s.Count; p.RetStart += p.RetMax {
-		log.Infof("Attempting to retrieve %d records: %d-%d with %d retries.", p.RetMax, p.RetStart+1, p.RetMax+p.RetStart, retries)
-		var t int
-		for t = 0; t < retries; t++ {
-			buf.Reset()
-			var (
-				r   io.ReadCloser
-				_bn int64
-			)
-			r, err = entrez.Fetch(db, p, tool, email, &h)
-			if err != nil {
-				if r != nil {
-					r.Close()
-				}
-				log.Warnf("Failed to retrieve on attempt %d... error: %v ... retrying.", t, err)
-				continue
-			}
-			_bn, err = io.Copy(buf, r)
-			bn += _bn
-			r.Close()
-			if err == nil {
-				break
-			}
-			log.Warnf("Failed to buffer on attempt %d... error: %v ... retrying.", t, err)
-		}
-		if err != nil {
-			os.Exit(1)
-		}
-
-		log.Infof("Retrieved records with %d retries... writing out.", t)
-		_n, err := io.Copy(of, buf)
-		n += _n
-		if err != nil {
-			log.Fatalf("Error: %v\n", err)
-		}
-	}
-	if bn != n {
-		log.Warnf("Writethrough mismatch: %d != %d", bn, n)
 	}
 }

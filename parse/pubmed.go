@@ -2,24 +2,23 @@ package parse
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
-
-	// "bytes"
-
 	"strings"
 
-	// "reflect"
-
-	// "github.com/gocolly/colly"
+	"github.com/JhuangLab/butils"
+	"github.com/JhuangLab/butils/log"
 	"github.com/PuerkitoBio/goquery"
+	jsoniter "github.com/json-iterator/go"
+	prose "gopkg.in/jdkato/prose.v2"
+	xurls "mvdan.cc/xurls/v2"
 )
 
 type PubmedFields struct {
 	Pmid, Doi, Title, Abs, Journal, Issue, Volume, Date, Issn string
+	Corelations                                               map[string]string
+	URLs                                                      []string
 	Keywords                                                  []string
 }
 
@@ -70,7 +69,7 @@ func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread i
 	}
 }
 
-func getPubmedFields(keywords []string, s *goquery.Selection) []byte {
+func getPubmedFields(keywords []string, s *goquery.Selection) (jsonData []byte) {
 	year := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Year").Text()
 	month := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Month").Text()
 	day := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Day").Text()
@@ -81,27 +80,58 @@ func getPubmedFields(keywords []string, s *goquery.Selection) []byte {
 	issn := s.Find("PubmedArticle MedlineCitation Article Journal ISSN").Text()
 	pmid := s.Find("PubmedArticle PubmedData > ArticleIdList > ArticleId[IdType=pubmed]").Text()
 	doi := s.Find("PubmedArticle PubmedData > ArticleIdList > ArticleId[IdType=doi]").Text()
-	abs := s.Find("PubmedArticle MedlineCitation Article AbstractText").Text()
+	abs := s.Find("PubmedArticle MedlineCitation Article Abstract").Text()
+	abs = butils.StrReplaceAll(abs, "\n  *", "\n")
+	abs = butils.StrReplaceAll(abs, "(<[/]AbstractText.*>)|(^\n)|(\n$)", "")
 	title := s.Find("PubmedArticle MedlineCitation Article ArticleTitle").Text()
-
+	titleAbs := title + "\n" + abs
+	urls := xurls.Relaxed().FindAllString(titleAbs, -1)
 	var key []string
 	for _, item := range keywords {
-		if strings.Contains(title, item) || strings.Contains(abs, item) {
+		if strings.Contains(titleAbs, item) {
 			key = append(key, item)
 		}
 	}
-	json, _ := json.MarshalIndent(
+	doc, err := prose.NewDocument(titleAbs)
+	corela := make(map[string]string)
+	if len(key) > 2 {
+		getKeywordsCorleations(doc, keywords, &corela)
+	}
+	if err != nil {
+		log.Warn(err)
+	} else {
+
+	}
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+	jsonData, _ = json.MarshalIndent(
 		PubmedFields{
-			Pmid:     pmid,
-			Doi:      doi,
-			Title:    title,
-			Abs:      abs,
-			Journal:  journal,
-			Issn:     issn,
-			Date:     date,
-			Issue:    issue,
-			Volume:   volume,
-			Keywords: key,
+			Pmid:        pmid,
+			Doi:         doi,
+			Title:       title,
+			Abs:         abs,
+			Journal:     journal,
+			Issn:        issn,
+			Date:        date,
+			Issue:       issue,
+			Volume:      volume,
+			Corelations: corela,
+			URLs:        urls,
+			Keywords:    key,
 		}, "", "   ")
-	return json
+	return jsonData
+}
+
+func getKeywordsCorleations(doc *prose.Document, keywords []string, corela *map[string]string) {
+	for _, sent := range doc.Sentences() {
+		kStr := []string{}
+		for _, item := range keywords {
+			if strings.Contains(sent.Text, item) {
+				kStr = append(kStr, item)
+			}
+		}
+		if len(kStr) >= 2 {
+			(*corela)[strings.Join(kStr, "+")] = sent.Text
+		}
+	}
 }
