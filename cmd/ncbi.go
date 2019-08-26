@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"github.com/JhuangLab/bquery/parse"
-	"github.com/JhuangLab/bquery/query"
+	"github.com/JhuangLab/bquery/fetch"
 	butils "github.com/JhuangLab/butils"
 	"github.com/JhuangLab/butils/log"
 	"github.com/spf13/cobra"
@@ -72,7 +72,7 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 		}
 	}
 	if email != "" && clQuery != "" {
-		query.Ncbi(db, clQuery, start, end, email, outfn, rettype, retmax, retries)
+		fetch.Ncbi(db, clQuery, start, end, email, outfn, rettype, retmax, retries)
 		helpFlags = false
 	}
 	if xml2json == "pubmed" {

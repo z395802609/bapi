@@ -36,6 +36,7 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(ncbiCmd)
+	rootCmd.AddCommand(gdcCmd)
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "", false, "No log output.")
 
 	rootCmd.Example = `  bquery ncbi -d pubmed -q B-ALL -t XML -e your_email@domain.com`
