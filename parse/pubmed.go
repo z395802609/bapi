@@ -86,16 +86,15 @@ func getPubmedFields(keywords []string, s *goquery.Selection) (jsonData []byte) 
 	title := s.Find("PubmedArticle MedlineCitation Article ArticleTitle").Text()
 	titleAbs := title + "\n" + abs
 	urls := xurls.Relaxed().FindAllString(titleAbs, -1)
-	var key []string
-	for _, item := range keywords {
-		if strings.Contains(titleAbs, item) {
-			key = append(key, item)
-		}
-	}
+
+	keywordsPat := strings.Join(keywords, "|")
+	key := butils.StrExtract(titleAbs, keywordsPat, 1000000)
+	key = butils.RemoveRepeatEle(key)
+
 	doc, err := prose.NewDocument(titleAbs)
 	corela := make(map[string]string)
 	if len(key) > 2 {
-		getKeywordsCorleations(doc, keywords, &corela)
+		getKeywordsCorleations(doc, keywordsPat, &corela)
 	}
 	if err != nil {
 		log.Warn(err)
@@ -122,14 +121,10 @@ func getPubmedFields(keywords []string, s *goquery.Selection) (jsonData []byte) 
 	return jsonData
 }
 
-func getKeywordsCorleations(doc *prose.Document, keywords []string, corela *map[string]string) {
+func getKeywordsCorleations(doc *prose.Document, keywordsPat string, corela *map[string]string) {
 	for _, sent := range doc.Sentences() {
-		kStr := []string{}
-		for _, item := range keywords {
-			if strings.Contains(sent.Text, item) {
-				kStr = append(kStr, item)
-			}
-		}
+		kStr := butils.StrExtract(sent.Text, keywordsPat, 1000000)
+		kStr = butils.RemoveRepeatEle(kStr)
 		if len(kStr) >= 2 {
 			(*corela)[strings.Join(kStr, "+")] = sent.Text
 		}
