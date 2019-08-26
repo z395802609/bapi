@@ -11,7 +11,7 @@ import (
 )
 
 // Ncbi modified from https://github.com/biogo/ncbi BSD license
-func Ncbi(db string, clQuery string, email string, outfn string, rettype string, retmax int, retries int) {
+func Ncbi(db string, clQuery string, start int, end int, email string, outfn string, rettype string, retmax int, retries int) {
 	ncbi.SetTimeout(0)
 	tool := "entrez.example"
 	h := entrez.History{}
@@ -22,7 +22,19 @@ func Ncbi(db string, clQuery string, email string, outfn string, rettype string,
 	if err != nil {
 		log.Fatalf("error: %v\n", err)
 	}
-	log.Infof("Will retrieve %d records.", s.Count)
+	log.Infof("Available retrieve %d records.", s.Count)
+	if end == -1 || end > s.Count {
+		end = s.Count
+	}
+	if start < 1 {
+		start = 1
+	} else if start > s.Count {
+		start = s.Count
+	}
+	if end < start {
+		end = start
+	}
+	log.Infof("Will retrieve %d records, from %d to %d.", end-start+1, start, end)
 
 	var of *os.File
 	if outfn == "" {
@@ -40,7 +52,10 @@ func Ncbi(db string, clQuery string, email string, outfn string, rettype string,
 		p     = &entrez.Parameters{RetMax: retmax, RetType: rettype, RetMode: "text"}
 		bn, n int64
 	)
-	for p.RetStart = 0; p.RetStart < s.Count; p.RetStart += p.RetMax {
+	if p.RetMax > end-start {
+		p.RetMax = end - start + 1
+	}
+	for p.RetStart = start - 1; p.RetStart < end; p.RetStart += p.RetMax {
 		log.Infof("Attempting to retrieve %d records: %d-%d with %d retries.", p.RetMax, p.RetStart+1, p.RetMax+p.RetStart, retries)
 		var t int
 		for t = 0; t < retries; t++ {

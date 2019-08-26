@@ -24,6 +24,9 @@ type PubmedFields struct {
 
 // ParsePubmedXML convert Pubmed XML to json
 func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread int) {
+	if len(xmlPaths) == 1 {
+		thread = 1
+	}
 	sem := make(chan bool, thread)
 
 	//|os.O_APPEND
@@ -86,7 +89,6 @@ func getPubmedFields(keywords []string, s *goquery.Selection) (jsonData []byte) 
 	title := s.Find("PubmedArticle MedlineCitation Article ArticleTitle").Text()
 	titleAbs := title + "\n" + abs
 	urls := xurls.Relaxed().FindAllString(titleAbs, -1)
-
 	keywordsPat := strings.Join(keywords, "|")
 	key := butils.StrExtract(titleAbs, keywordsPat, 1000000)
 	key = butils.RemoveRepeatEle(key)
