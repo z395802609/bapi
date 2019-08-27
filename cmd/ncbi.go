@@ -36,8 +36,8 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 			log.FATAL(fmt.Sprintf("Could not to create %s", path.Dir(bqueryClis.outfn)))
 		}
 	}
-	if bqueryClis.email != "" && bqueryClis.ncbiclQuery != "" {
-		fetch.Ncbi(bqueryClis.ncbiDB, bqueryClis.ncbiclQuery, bqueryClis.from, bqueryClis.size, bqueryClis.email, bqueryClis.outfn, bqueryClis.format, bqueryClis.ncbiRetmax, bqueryClis.retries)
+	if bqueryClis.email != "" && bqueryClis.query != "" {
+		fetch.Ncbi(bqueryClis.ncbiDB, bqueryClis.query, bqueryClis.from, bqueryClis.size, bqueryClis.email, bqueryClis.outfn, bqueryClis.format, bqueryClis.ncbiRetmax, bqueryClis.retries)
 		bqueryClis.helpFlags = false
 	}
 	if bqueryClis.ncbiXML2json == "pubmed" {
@@ -54,7 +54,6 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 }
 
 func init() {
-	ncbiCmd.Flags().StringVarP(&bqueryClis.ncbiclQuery, "query", "q", "", "Query specifies the search query for record retrieval (required).")
 	ncbiCmd.Flags().StringVarP(&bqueryClis.ncbiDB, "db", "d", "pubmed", "Db specifies the database to search")
 	ncbiCmd.Flags().IntVarP(&bqueryClis.ncbiRetmax, "per-size", "m", 100, "Retmax specifies the number of records to be retrieved per request.")
 	ncbiCmd.Flags().StringVarP(&bqueryClis.ncbiXML2json, "xml2json", "", "", "Convert XML files to json [e.g. pubmed].")

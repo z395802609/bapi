@@ -11,6 +11,7 @@ require (
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/json-iterator/go v1.1.7
 	github.com/klauspost/compress v1.8.0 // indirect
+	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mingrammer/commonregex v1.0.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -20,6 +21,8 @@ require (
 	github.com/onsi/ginkgo v1.9.0 // indirect
 	github.com/onsi/gomega v1.6.0 // indirect
 	github.com/spf13/cobra v0.0.5
+	github.com/vbauerster/mpb v3.4.0+incompatible
+	github.com/vbauerster/mpb/v4 v4.9.2
 	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56 // indirect
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
 	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect

@@ -6,24 +6,27 @@ type GdcEndpoints struct {
 	Cases       bool
 	Files       bool
 	Annotations bool
-	Data        string
-	Manifest    string
-	Slicing     string
-	Submission  string
+	Data        bool
+	Manifest    bool
+	Slicing     bool
 	Legacy      bool
 	ExtraParams GdcExtraParams
 }
 
 type GdcExtraParams struct {
-	Size   int
-	From   int
-	Sort   string
-	Filter string
-	Pretty bool
-	Format string
-	Fields string
-	Expand string
-	Facets string
+	RemoteName bool
+	Token      string
+	Query      string
+	Size       int
+	From       int
+	Sort       string
+	Filter     string
+	Pretty     bool
+	JSON       bool
+	Format     string
+	Fields     string
+	Expand     string
+	Facets     string
 }
 
 type GdcStatus struct {

@@ -12,49 +12,127 @@ go get -u github.com/JhuangLab/bquery
 
 ## Usage
 
+**Main interface:**
+
 ```bash
-=== main ===
 Query bioinformatics website APIs. More see here https://github.com/JhuangLab/bquery.
 
 Usage:
   bquery [flags]
   bquery [command]
 
-Examples:
-  bquery ncbi -d pubmed -q B-ALL -t XML -e your_email@domain.com
-
 Available Commands:
+  gdc         Query GDC portal website APIs.
   help        Help about any command
   ncbi        Query ncbi website APIs.
 
 Flags:
-  -h, --help      help for bquery
-      --quiet     No log output.
-      --version   version for bquery
+  -e, --email string    Email specifies the email address to be sent to the server (NCBI website is required). (default "your_email@domain.com")
+      --format string   Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).
+      --from int        Parameters of API control the start item of retrived data. (default -1)
+  -h, --help            help for bquery
+  -o, --outfn string    Out specifies destination of the returned data (default to stdout).
+  -q, --query string    Query specifies the search query for record retrieval (required).
+      --quiet           No log output.
+  -r, --retries int     Retry specifies the number of attempts to retrieve the data. (default 5)
+      --size int        Parameters of API control the lenth of retrived data. Default is auto determined. (default -1)
+      --version         version for bquery
 
 Use "bquery [command] --help" for more information about a command.
+```
 
-=== bquery ncbi ===
+**GDC query:**
+
+```bash
+Query GDC portal APIs. More see here https://github.com/JhuangLab/bquery.
+
+Usage:
+  bquery gdc [flags]
+
+Examples:
+  bquery gdc -p
+  bquery gdc -p --json-pretty
+  bquery gdc -p -q TARGET-NBL --json-pretty
+  bquery gdc -p --format TSV > tcga_projects.tsv
+  bquery gdc -p --format CSV > tcga_projects.csv
+  bquery gdc -p --from 1 --szie 2
+  bquery gdc -s
+  bquery gdc -c
+  bquery gdc -f
+  bquery gdc -a
+
+  // Download manifest for gdc-client
+  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -o my_manifest.txt
+  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" > my_manifest.txt
+  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -n
+
+  // Download data
+  bquery gdc -d -q "5b2974ad-f932-499b-90a3-93577a9f0573" -n
+
+Flags:
+  -a, --annotations     Retrive annotations info from GDC portal.
+  -c, --cases           Retrive cases info from GDC portal.
+  -d, --data            Retrive /data from GDC portal.
+  -f, --files           Retrive files info from GDC portal.
+      --filter string   Retrive data with GDC filter.
+  -h, --help            help for gdc
+      --json            Retrive JSON data.
+      --json-pretty     Retrive pretty JSON data.
+  -l, --legacy          Use legacy API of GDC portal.
+  -m, --manifest        Retrive /manifest data from GDC portal.
+  -p, --projects        Retrive projects meta info from GDC portal.
+  -n, --remote-name     Use remote defined filename.
+      --slicing         Retrive BAM slicing from GDC portal.
+  -s, --status          Check GDC portal status (https://portal.gdc.cancer.gov/).
+      --token string    Token to access GDC.
+
+Global Flags:
+  -e, --email string    Email specifies the email address to be sent to the server (NCBI website is required). (default "your_email@domain.com")
+      --format string   Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).
+      --from int        Parameters of API control the start item of retrived data. (default -1)
+  -o, --outfn string    Out specifies destination of the returned data (default to stdout).
+  -q, --query string    Query specifies the search query for record retrieval (required).
+      --quiet           No log output.
+  -r, --retries int     Retry specifies the number of attempts to retrieve the data. (default 5)
+      --size int        Parameters of API control the lenth of retrived data. Default is auto determined. (default -1)
+
+```
+
+**Query NCBI:**
+
+```bash
 Query ncbi website APIs. More see here https://github.com/JhuangLab/bquery.
 
 Usage:
   bquery ncbi [flags]
 
 Examples:
-  bquery ncbi -d pubmed -q B-ALL -t XML -e your_email@domain.com
+  bquery ncbi -d pubmed -q B-ALL --format XML -e your_email@domain.com
+  bquery ncbi -q "RNA-seq and bioinformatics[journal]" -e "your_email@domain.com" -m 100 | awk '/<[?]xml version="1.0" [?]>/{close(f); f="abstract.http.XML.tmp" ++c;next} {print>f;}'
+
+  k="algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org, RNA-Seq, DNA, profile, landscape"
+  echo "[" > final.json
+  bquery ncbi --xml2json pubmed abstract.http.XML.tmp* -k "${k}"| sed 's/}{/},{/g' >> final.json
+  echo "]" >> final.json
 
 Flags:
-  -d, --db string        Db specifies the database to search (default "pubmed")
-  -e, --email string     Email specifies the email address to be sent to the server (required).
-  -h, --help             help for ncbi
-  -o, --outfn string     Out specifies destination of the returned data (default to stdout).
-  -q, --query string     Query specifies the search query for record retrieval (required).
-  -m, --retmax int       Retmax specifies the number of records to be retrieved per request. (default 500)
-  -r, --retries int      Retry specifies the number of attempts to retrieve the data. (default 5)
-  -t, --rettype string   Rettype specifies the format of the returned data. (default "XML")
+  -d, --db string         Db specifies the database to search (default "pubmed")
+  -h, --help              help for ncbi
+  -k, --keywords string   Keywords to extracted from abstract. (default "algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org")
+  -m, --per-size int      Retmax specifies the number of records to be retrieved per request. (default 100)
+  -t, --thread int        Thread to parse XML from local files. (default 2)
+      --xml2json string   Convert XML files to json [e.g. pubmed].
 
 Global Flags:
-      --quiet   No log output.
+  -e, --email string    Email specifies the email address to be sent to the server (NCBI website is required). (default "your_email@domain.com")
+      --format string   Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).
+      --from int        Parameters of API control the start item of retrived data. (default -1)
+  -o, --outfn string    Out specifies destination of the returned data (default to stdout).
+  -q, --query string    Query specifies the search query for record retrieval (required).
+      --quiet           No log output.
+  -r, --retries int     Retry specifies the number of attempts to retrieve the data. (default 5)
+      --size int        Parameters of API control the lenth of retrived data. Default is auto determined. (default -1)
+
 ```
 
 ## Maintainer

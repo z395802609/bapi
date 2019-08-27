@@ -13,10 +13,10 @@ type bqueryClisT struct {
 	quiet        bool
 	helpFlags    bool
 	version      string
-	ncbiclQuery  string
 	ncbiDB       string
 	ncbiRetmax   int
 	retries      int
+	query        string
 	format       string
 	outfn        string
 	email        string
@@ -26,6 +26,7 @@ type bqueryClisT struct {
 	ncbiThread   int
 	from         int
 	size         int
+	remoteName   bool
 }
 
 var bqueryClis = bqueryClisT{}
@@ -57,10 +58,11 @@ func init() {
 	bqueryClis.version = "v0.1.0"
 	rootCmd.AddCommand(ncbiCmd)
 	rootCmd.AddCommand(gdcCmd)
+	rootCmd.PersistentFlags().StringVarP(&bqueryClis.query, "query", "q", "", "Query specifies the search query for record retrieval (required).")
 	rootCmd.PersistentFlags().StringVarP(&bqueryClis.format, "format", "", "", "Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).")
 	rootCmd.PersistentFlags().StringVarP(&bqueryClis.outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
 	rootCmd.PersistentFlags().BoolVarP(&bqueryClis.quiet, "quiet", "", false, "No log output.")
-	rootCmd.PersistentFlags().IntVarP(&bqueryClis.from, "from", "", 0, "Parameters of API control the start item of retrived data.")
+	rootCmd.PersistentFlags().IntVarP(&bqueryClis.from, "from", "", -1, "Parameters of API control the start item of retrived data.")
 	rootCmd.PersistentFlags().IntVarP(&bqueryClis.size, "size", "", -1, "Parameters of API control the lenth of retrived data. Default is auto determined.")
 	rootCmd.PersistentFlags().StringVarP(&bqueryClis.email, "email", "e", "your_email@domain.com", "Email specifies the email address to be sent to the server (NCBI website is required).")
 	rootCmd.PersistentFlags().IntVarP(&bqueryClis.retries, "retries", "r", 5, "Retry specifies the number of attempts to retrieve the data.")
