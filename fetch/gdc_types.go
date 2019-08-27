@@ -11,7 +11,6 @@ type GdcEndpoints struct {
 	Slicing     string
 	Submission  string
 	Legacy      bool
-	Json        bool
 	ExtraParams GdcExtraParams
 }
 

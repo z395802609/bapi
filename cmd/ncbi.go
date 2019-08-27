@@ -6,26 +6,12 @@ import (
 	"os"
 	"path"
 
-	"github.com/JhuangLab/bquery/parse"
 	"github.com/JhuangLab/bquery/fetch"
+	"github.com/JhuangLab/bquery/parse"
 	butils "github.com/JhuangLab/butils"
 	"github.com/JhuangLab/butils/log"
 	"github.com/spf13/cobra"
 )
-
-var clQuery string
-var db string
-var rettype string
-var retmax int
-var outfn string
-var email string
-var retries int
-var xml2json string
-var xmlPaths []string
-var keywords string
-var thread int
-var start int
-var end int
 
 var ncbiCmd = &cobra.Command{
 	Use:   "ncbi",
@@ -36,54 +22,51 @@ var ncbiCmd = &cobra.Command{
 	},
 }
 
-func init() {
-	ncbiCmd.Flags().StringVarP(&clQuery, "query", "q", "", "Query specifies the search query for record retrieval (required).")
-	ncbiCmd.Flags().IntVarP(&start, "query-start", "a", 1, "Control the start recored in the request.")
-	ncbiCmd.Flags().IntVarP(&end, "query-end", "b", -1, "Control the last recored in the request (-1 is to retrieve all available records).")
-	ncbiCmd.Flags().StringVarP(&db, "db", "d", "pubmed", "Db specifies the database to search")
-	ncbiCmd.Flags().StringVarP(&rettype, "rettype", "", "XML", "Rettype specifies the format of the returned data.")
-	ncbiCmd.Flags().IntVarP(&retmax, "retmax", "m", 100, "Retmax specifies the number of records to be retrieved per request.")
-	ncbiCmd.Flags().StringVarP(&outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
-	ncbiCmd.Flags().StringVarP(&email, "email", "e", "your_email@domain.com", "Email specifies the email address to be sent to the server (required).")
-	ncbiCmd.Flags().IntVarP(&retries, "retries", "r", 5, "Retry specifies the number of attempts to retrieve the data.")
-	ncbiCmd.Flags().StringVarP(&xml2json, "xml2json", "", "", "Convert XML files to json [e.g. pubmed].")
-	ncbiCmd.Flags().IntVarP(&thread, "thread", "t", 2, "Thread to parse XML from local files.")
-	ncbiCmd.Flags().StringVarP(&keywords, "keywords", "k", "algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org", "Keywords to extracted from abstract.")
-	ncbiCmd.Flags().BoolVarP(&quiet, "quiet", "", false, "No log output.")
+func ncbiCmdRunOptions(cmd *cobra.Command) {
+	if bqueryClis.quiet {
+		log.SetOutput(ioutil.Discard)
+	} else {
+		log.SetOutput(os.Stderr)
+	}
+	if bqueryClis.format == "" {
+		bqueryClis.format = "XML"
+	}
+	if hasDir, _ := butils.PathExists(bqueryClis.outfn); bqueryClis.outfn != "" && !hasDir {
+		if err := butils.CreateDir(path.Dir(bqueryClis.outfn)); err != nil {
+			log.FATAL(fmt.Sprintf("Could not to create %s", path.Dir(bqueryClis.outfn)))
+		}
+	}
+	if bqueryClis.email != "" && bqueryClis.ncbiclQuery != "" {
+		fetch.Ncbi(bqueryClis.ncbiDB, bqueryClis.ncbiclQuery, bqueryClis.from, bqueryClis.size, bqueryClis.email, bqueryClis.outfn, bqueryClis.format, bqueryClis.ncbiRetmax, bqueryClis.retries)
+		bqueryClis.helpFlags = false
+	}
+	if bqueryClis.ncbiXML2json == "pubmed" {
+		if len(cmd.Flags().Args()) >= 1 {
+			bqueryClis.ncbiXMLPaths = append(bqueryClis.ncbiXMLPaths, cmd.Flags().Args()...)
+			keywordsList := butils.StrSplit(bqueryClis.ncbiKeywords, ", |,", 10000)
+			parse.ParsePubmedXML(bqueryClis.ncbiXMLPaths, bqueryClis.outfn, keywordsList, bqueryClis.ncbiThread)
+		}
+		bqueryClis.helpFlags = false
+	}
+	if bqueryClis.helpFlags {
+		cmd.Help()
+	}
+}
 
-	ncbiCmd.Example = `  bquery ncbi -d pubmed -q B-ALL -t XML -e your_email@domain.com
+func init() {
+	ncbiCmd.Flags().StringVarP(&bqueryClis.ncbiclQuery, "query", "q", "", "Query specifies the search query for record retrieval (required).")
+	ncbiCmd.Flags().StringVarP(&bqueryClis.ncbiDB, "db", "d", "pubmed", "Db specifies the database to search")
+	ncbiCmd.Flags().IntVarP(&bqueryClis.ncbiRetmax, "per-size", "m", 100, "Retmax specifies the number of records to be retrieved per request.")
+	ncbiCmd.Flags().StringVarP(&bqueryClis.ncbiXML2json, "xml2json", "", "", "Convert XML files to json [e.g. pubmed].")
+	ncbiCmd.Flags().IntVarP(&bqueryClis.ncbiThread, "thread", "t", 2, "Thread to parse XML from local files.")
+	ncbiCmd.Flags().StringVarP(&bqueryClis.ncbiKeywords, "keywords", "k", "algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org", "Keywords to extracted from abstract.")
+	ncbiCmd.Flags().BoolVarP(&bqueryClis.quiet, "quiet", "", false, "No log output.")
+
+	ncbiCmd.Example = `  bquery ncbi -d pubmed -q B-ALL --format XML -e your_email@domain.com
   bquery ncbi -q "RNA-seq and bioinformatics[journal]" -e "your_email@domain.com" -m 100 | awk '/<[?]xml version="1.0" [?]>/{close(f); f="abstract.http.XML.tmp" ++c;next} {print>f;}'
   
   k="algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org, RNA-Seq, DNA, profile, landscape"
   echo "[" > final.json
   bquery ncbi --xml2json pubmed abstract.http.XML.tmp* -k "${k}"| sed 's/}{/},{/g' >> final.json
   echo "]" >> final.json`
-}
-
-func ncbiCmdRunOptions(cmd *cobra.Command) {
-	if quiet {
-		log.SetOutput(ioutil.Discard)
-	} else {
-		log.SetOutput(os.Stderr)
-	}
-	if hasDir, _ := butils.PathExists(outfn); outfn != "" && !hasDir {
-		if err := butils.CreateDir(path.Dir(outfn)); err != nil {
-			log.FATAL(fmt.Sprintf("Could not to create %s", path.Dir(outfn)))
-		}
-	}
-	if email != "" && clQuery != "" {
-		fetch.Ncbi(db, clQuery, start, end, email, outfn, rettype, retmax, retries)
-		helpFlags = false
-	}
-	if xml2json == "pubmed" {
-		if len(cmd.Flags().Args()) >= 1 {
-			xmlPaths = append(xmlPaths, cmd.Flags().Args()...)
-			keywordsList := butils.StrSplit(keywords, ", |,", 10000)
-			parse.ParsePubmedXML(xmlPaths, outfn, keywordsList, thread)
-		}
-		helpFlags = false
-	}
-	if helpFlags {
-		cmd.Help()
-	}
 }
