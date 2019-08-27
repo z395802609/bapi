@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
 	"path/filepath"
-	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/JhuangLab/butils"
@@ -26,7 +26,7 @@ func createIOStream(of *os.File, outfn string) *os.File {
 	if outfn == "" {
 		of = os.Stdout
 	} else {
-		of, err = os.Create(outfn)
+		of, err = os.OpenFile(outfn, os.O_CREATE|os.O_WRONLY, 0664)
 		if err != nil {
 			log.Fatalf("error: %v", err)
 		}
@@ -36,6 +36,9 @@ func createIOStream(of *os.File, outfn string) *os.File {
 }
 
 func setQueryFromEnd(from int, size int, total int) (int, int) {
+	if size == -1 {
+		size = total
+	}
 	end := from + size
 	if end == -1 || end > total {
 		end = total
@@ -59,11 +62,18 @@ func defaultCheckRedirect(req *http.Request, via []*http.Request) error {
 }
 
 // HTTPDownload can use golang http.Get to query URL with progress bar
-func HTTPDownload(url string, destFn string, pg *mpb.Progress, quiet bool, saveLog bool) {
+func HTTPDownload(url string, destFn string, pg *mpb.Progress, quiet bool, saveLog bool, retries int, timeout int, retSleepTime int) error {
 	client := &http.Client{
 		CheckRedirect: defaultCheckRedirect,
 		Jar:           gCurCookieJar,
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: time.Duration(timeout) * time.Second,
+			}).Dial,
+		},
 	}
+	var t int
+	success := false
 
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Set("Connection", "keep-alive")
@@ -71,13 +81,31 @@ func HTTPDownload(url string, destFn string, pg *mpb.Progress, quiet bool, saveL
 	if err != nil {
 		// handle error
 		log.Warn(err)
-		return
+		return err
 	}
 	gCurCookies = gCurCookieJar.Cookies(req.URL)
+
+	for t = 0; t < retries; t++ {
+		err := downloadWorker(client, req, url, destFn, pg, quiet, saveLog)
+		if err == nil {
+			success = true
+			break
+		} else {
+			log.Warnf("Failed to retrive on attempt %d... error: %v ... retrying after %d seconds.", t+1, err, retSleepTime)
+			time.Sleep(time.Duration(retSleepTime) * time.Second)
+		}
+	}
+	if !success {
+		return err
+	}
+	return nil
+}
+
+func downloadWorker(client *http.Client, req *http.Request, url string, destFn string, pg *mpb.Progress, quiet bool, saveLog bool) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Warn(err)
-		return
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -86,10 +114,7 @@ func HTTPDownload(url string, destFn string, pg *mpb.Progress, quiet bool, saveL
 			log.Warnf("Access failed: %s", url)
 			fmt.Println("")
 		}
-		return
-	}
-	if checkHTTPGetURLRdirect(resp, url, destFn, pg, quiet, saveLog) {
-		return
+		return err
 	}
 	size := resp.ContentLength
 
@@ -104,7 +129,7 @@ func HTTPDownload(url string, destFn string, pg *mpb.Progress, quiet bool, saveL
 	dest, err := os.Create(destFn)
 	if err != nil {
 		log.Warnf("Can't create %s: %v\n", destName, err)
-		return
+		return err
 	}
 	prefixStr := filepath.Base(destFn)
 	prefixStrLen := utf8.RuneCountInString(prefixStr)
@@ -129,25 +154,22 @@ func HTTPDownload(url string, destFn string, pg *mpb.Progress, quiet bool, saveL
 		// create proxy reader
 		reader := bar.ProxyReader(resp.Body)
 		// and copy from reader, ignoring errors
-		io.Copy(dest, reader)
+		_, err := io.Copy(dest, reader)
+		if err != nil {
+			bar.Abort(true)
+			reader.Close()
+			log.Warn(err)
+			return err
+		}
 	} else {
-		io.Copy(dest, io.Reader(resp.Body))
-	}
-	defer dest.Close()
-}
-
-func checkHTTPGetURLRdirect(resp *http.Response, url string, destFn string, pg *mpb.Progress, quiet bool, saveLog bool) (status bool) {
-	if strings.Contains(url, "https://www.sciencedirect.com") {
-		v, err := ioutil.ReadAll(resp.Body)
-		if err == nil {
-			if butils.StrDetect(string(v), "https://pdf.sciencedirectassets.com") {
-				url = butils.StrExtract(string(v), `https://pdf.sciencedirectassets.com/.*&type=client`, 1)[0]
-				HTTPDownload(url, destFn, pg, quiet, saveLog)
-				return true
-			}
+		_, err := io.Copy(dest, io.Reader(resp.Body))
+		if err != nil {
+			log.Warn(err)
+			return err
 		}
 	}
-	return false
+	defer dest.Close()
+	return nil
 }
 
 func init() {

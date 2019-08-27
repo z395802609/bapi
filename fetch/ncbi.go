@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"time"
 
 	"github.com/JhuangLab/butils/log"
 	"github.com/biogo/ncbi"
@@ -11,8 +12,8 @@ import (
 )
 
 // Ncbi modified from https://github.com/biogo/ncbi BSD license
-func Ncbi(db string, clQuery string, from int, size int, email string, outfn string, rettype string, retmax int, retries int) {
-	ncbi.SetTimeout(0)
+func Ncbi(db string, clQuery string, from int, size int, email string, outfn string, rettype string, retmax int, retries int, timeout int, retSleepTime int) {
+	ncbi.SetTimeout(time.Duration(timeout) * time.Second)
 	tool := "entrez.example"
 	h := entrez.History{}
 	parms := entrez.Parameters{
@@ -51,7 +52,8 @@ func Ncbi(db string, clQuery string, from int, size int, email string, outfn str
 				if r != nil {
 					r.Close()
 				}
-				log.Warnf("Failed to retrieve on attempt %d... error: %v ... retrying.", t, err)
+				log.Warnf("Failed to retrieve on attempt %d... error: %v ... retrying after %d seconds.", t+1, err, retSleepTime)
+				time.Sleep(time.Duration(retSleepTime) * time.Second)
 				continue
 			}
 			_bn, err = io.Copy(buf, r)
@@ -60,13 +62,14 @@ func Ncbi(db string, clQuery string, from int, size int, email string, outfn str
 				bn += _bn
 				break
 			}
-			log.Warnf("Failed to buffer on attempt %d... error: %v ... retrying.", t, err)
+			log.Warnf("Failed to buffer on attempt %d... error: %v ... retrying after %d seconds.", t+1, err, retSleepTime)
+			time.Sleep(time.Duration(retSleepTime) * time.Second)
 		}
 		if err != nil {
 			os.Exit(1)
 		}
 
-		log.Infof("Retrieved records with %d retries... writing out.", t)
+		log.Infof("Retrieved records with %d retries... writing out.", t+1)
 		_n, err := io.Copy(of, buf)
 		n += _n
 		if err != nil {

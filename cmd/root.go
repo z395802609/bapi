@@ -27,6 +27,8 @@ type bqueryClisT struct {
 	from         int
 	size         int
 	remoteName   bool
+	timeout      int
+	retSleepTime int
 }
 
 var bqueryClis = bqueryClisT{}
@@ -66,6 +68,8 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&bqueryClis.size, "size", "", -1, "Parameters of API control the lenth of retrived data. Default is auto determined.")
 	rootCmd.PersistentFlags().StringVarP(&bqueryClis.email, "email", "e", "your_email@domain.com", "Email specifies the email address to be sent to the server (NCBI website is required).")
 	rootCmd.PersistentFlags().IntVarP(&bqueryClis.retries, "retries", "r", 5, "Retry specifies the number of attempts to retrieve the data.")
+	rootCmd.PersistentFlags().IntVarP(&bqueryClis.timeout, "timeout", "", 35, "Set the timeout of per request.")
+	rootCmd.PersistentFlags().IntVarP(&bqueryClis.retSleepTime, "retries-sleep-time", "", 5, "Sleep time after one retry.")
 
 	rootCmd.Version = bqueryClis.version
 }

@@ -37,7 +37,7 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 		}
 	}
 	if bqueryClis.email != "" && bqueryClis.query != "" {
-		fetch.Ncbi(bqueryClis.ncbiDB, bqueryClis.query, bqueryClis.from, bqueryClis.size, bqueryClis.email, bqueryClis.outfn, bqueryClis.format, bqueryClis.ncbiRetmax, bqueryClis.retries)
+		fetch.Ncbi(bqueryClis.ncbiDB, bqueryClis.query, bqueryClis.from, bqueryClis.size, bqueryClis.email, bqueryClis.outfn, bqueryClis.format, bqueryClis.ncbiRetmax, bqueryClis.retries, bqueryClis.timeout, bqueryClis.retSleepTime)
 		bqueryClis.helpFlags = false
 	}
 	if bqueryClis.ncbiXML2json == "pubmed" {

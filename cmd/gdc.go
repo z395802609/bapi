@@ -34,7 +34,7 @@ func gdcCmdRunOptions(cmd *cobra.Command) {
 		endp.ExtraParams.Format = "json"
 	}
 	if endp.Status || endp.Projects || endp.Cases || endp.Files || endp.Annotations || endp.Data || endp.Manifest || endp.Slicing {
-		fetch.Gdc(endp, bqueryClis.outfn, bqueryClis.retries, bqueryClis.quiet)
+		fetch.Gdc(endp, bqueryClis.outfn, bqueryClis.retries, bqueryClis.timeout, bqueryClis.retSleepTime, bqueryClis.quiet)
 		bqueryClis.helpFlags = false
 	}
 	if bqueryClis.helpFlags {
@@ -57,6 +57,8 @@ func init() {
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Filter, "filter", "", "", "Retrive data with GDC filter.")
 	gdcCmd.Flags().BoolVarP(&endp.Legacy, "legacy", "l", false, "Use legacy API of GDC portal.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Token, "token", "", "", "Token to access GDC.")
+	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Sort, "sort", "", "", "Sort parameters.")
+	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Fields, "fields", "", "", "Fields parameters.")
 	gdcCmd.Example = `  bquery gdc -p
   bquery gdc -p --json-pretty
   bquery gdc -p -q TARGET-NBL --json-pretty

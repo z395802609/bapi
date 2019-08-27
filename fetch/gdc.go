@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -16,7 +18,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	mpb "github.com/vbauerster/mpb/v4"
 
-	"github.com/JhuangLab/butils"
 	"github.com/JhuangLab/butils/log"
 )
 
@@ -30,8 +31,14 @@ var tables []*tablewriter.Table
 var pg *mpb.Progress
 
 // Gdc accesss https://api.gdc.cancer.gov data
-func Gdc(endpoint GdcEndpoints, outfn string, retries int, quite bool) {
-	client := &http.Client{}
+func Gdc(endpoint GdcEndpoints, outfn string, retries int, timeout int, retSleepTime int, quite bool) {
+	client := &http.Client{
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: time.Duration(timeout) * time.Second,
+			}).Dial,
+		},
+	}
 	host := gdcAPIHost
 	if endpoint.Legacy {
 		host = gdcAPIHostLegacy
@@ -55,39 +62,30 @@ func Gdc(endpoint GdcEndpoints, outfn string, retries int, quite bool) {
 			continue
 		}
 		log.Infof("Query GDC portal %s API: %s.", queryFlag, req.URL.String())
-		var t int
-		var resp *http.Response
-		var err error
-		var success bool
-		for t = 0; t < retries; t++ {
-			resp, err = client.Do(req)
-			if err != nil {
-				log.Warnf("Failed to retrieve on attempt %d... error: %v ... retrying.", t, err)
-				continue
-			} else {
-				success = true
-				break
-			}
-		}
-		if !success {
-			return
-		}
-		if outfn == "" && (resp.Header.Get("Content-Disposition") != "" && endpoint.ExtraParams.RemoteName) {
-			outfn = resp.Header.Get("Content-Disposition")
-			outfn = butils.StrReplaceAll(outfn, ".*filename=", "")
-		}
+		resp, err := client.Do(req)
 		if resp.StatusCode != http.StatusOK {
 			log.Warnf("Access failed: %s", host+"/"+endpoints[i])
 			fmt.Println("")
 			return
 		}
+		contentDis := resp.Header.Get("Content-Disposition")
+		if outfn == "" && contentDis != "" && endpoint.ExtraParams.RemoteName &&
+			strings.Contains(contentDis, "filename") {
+			_, params, err := mime.ParseMediaType(contentDis)
+			if err != nil {
+				log.Warn(err)
+			} else {
+				outfn = params["filename"]
+			}
+		}
+
 		defer resp.Body.Close()
 
 		var of *os.File
 		if outfn == "" {
 			of = os.Stdout
 		} else {
-			of, err = os.Create(outfn)
+			of, err := os.OpenFile(outfn, os.O_CREATE|os.O_WRONLY, 0664)
 			if err != nil {
 				log.Fatalf("error: %v", err)
 			}
@@ -95,11 +93,13 @@ func Gdc(endpoint GdcEndpoints, outfn string, retries int, quite bool) {
 			wd, _ := os.Getwd()
 			log.Infof("Trying %s => %s", req.URL.String(), path.Join(wd, outfn))
 		}
-		if endpoint.Data || endpoint.Slicing {
-			HTTPDownload(req.URL.String(), outfn, pg, quite, false)
+		if outfn != "" && endpoint.Data || endpoint.Slicing {
+			err = HTTPDownload(req.URL.String(), outfn, pg, quite, false, retries, timeout, retSleepTime)
+			if err != nil {
+				log.Warn(err)
+			}
 			return
 		}
-
 		if endpoint.ExtraParams.Format != "" || endpoint.ExtraParams.Pretty || endpoint.ExtraParams.Query != "" {
 			_, err := io.Copy(of, resp.Body)
 			if err != nil {
@@ -126,56 +126,59 @@ func setGdcReq(host string, i int, endpoint *GdcEndpoints) (*http.Request, strin
 
 func setGdcQuerySuffix(queryFlag string, endpoint *GdcEndpoints) (suffix string) {
 	queryStr := ""
+	suffixList := []string{}
 	if endpoint.ExtraParams.Query != "" {
 		if endpoint.Slicing {
 			queryStr = "/view/" + endpoint.ExtraParams.Query
-		} else {
+		} else if !strings.Contains(queryFlag, "?") {
 			queryStr = "/" + endpoint.ExtraParams.Query
+		} else {
+			queryStr = "?" + endpoint.ExtraParams.Query
 		}
 	}
 	if strings.Contains(endpoint.ExtraParams.Query, ",") && endpoint.Data {
 		queryStr = queryStr + "?tarfile"
 	} else if endpoint.Manifest {
-		suffix = "&return_type=manifest"
+		suffixList = append(suffixList, "return_type=manifest")
 	}
 	if queryFlag == "projects" && endpoint.ExtraParams.Size == -1 {
-		suffix = suffix + "&size=1000000"
+		suffixList = append(suffixList, "size=1000000")
 	}
 	if endpoint.ExtraParams.Format != "" {
-		suffix = suffix + "&format=" + endpoint.ExtraParams.Format
+		suffixList = append(suffixList, "format="+endpoint.ExtraParams.Format)
 	}
 	if endpoint.ExtraParams.Fields != "" {
-		suffix = suffix + "&fields=" + endpoint.ExtraParams.Fields
+		suffixList = append(suffixList, "fields="+endpoint.ExtraParams.Fields)
 	}
 	if endpoint.ExtraParams.Filter != "" {
-		suffix = suffix + "&filter=" + endpoint.ExtraParams.Filter
+		suffixList = append(suffixList, "filter="+endpoint.ExtraParams.Filter)
 	}
 	if endpoint.ExtraParams.Expand != "" {
-		suffix = suffix + "&expand=" + endpoint.ExtraParams.Expand
+		suffixList = append(suffixList, "expand="+endpoint.ExtraParams.Expand)
 	}
 	if endpoint.ExtraParams.Facets != "" {
-		suffix = suffix + "&facets=" + endpoint.ExtraParams.Facets
+		suffixList = append(suffixList, "facets="+endpoint.ExtraParams.Facets)
 	}
 	if endpoint.ExtraParams.Sort != "" {
-		suffix = suffix + "&sort=" + endpoint.ExtraParams.Sort
+		suffixList = append(suffixList, "sort="+endpoint.ExtraParams.Sort)
 	}
 	if endpoint.ExtraParams.From != -1 {
-		suffix = suffix + "&from=" + strconv.Itoa(endpoint.ExtraParams.From)
+		suffixList = append(suffixList, "from="+strconv.Itoa(endpoint.ExtraParams.From))
 	}
 	if endpoint.ExtraParams.Size != -1 {
-		suffix = suffix + "&size=" + strconv.Itoa(endpoint.ExtraParams.Size)
+		suffixList = append(suffixList, "size="+strconv.Itoa(endpoint.ExtraParams.Size))
 	}
 	if endpoint.ExtraParams.Pretty {
-		suffix = suffix + "&pretty=true"
+		suffixList = append(suffixList, "pretty=true")
 	}
-	if suffix != "" && queryStr != "" {
+	if len(suffixList) > 0 && queryStr != "" {
 		if !strings.Contains(queryStr, "?") {
-			suffix = queryStr + "?" + suffix
+			suffix = queryStr + "?" + strings.Join(suffixList, "&")
 		} else {
-			suffix = queryStr + suffix
+			suffix = queryStr + "&" + strings.Join(suffixList, "&")
 		}
-	} else if suffix != "" {
-		suffix = "?" + suffix
+	} else if len(suffixList) > 0 {
+		suffix = "?" + strings.Join(suffixList, "&")
 	} else if queryStr != "" {
 		suffix = queryStr
 	}
