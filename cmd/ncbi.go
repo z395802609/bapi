@@ -67,5 +67,8 @@ func init() {
   k="algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org, RNA-Seq, DNA, profile, landscape"
   echo "[" > final.json
   bapi ncbi --xml2json pubmed abstract.http.XML.tmp* -k "${k}"| sed 's/}{/},{/g' >> final.json
-  echo "]" >> final.json`
+  echo "]" >> final.json
+
+  bapi ncbi -q "Galectins control MTOR and AMPK in response to lysosomal damage to induce autophagy OR MTOR-independent autophagy induced by interrupted endoplasmic reticulum-mitochondrial Ca2+ communication: a dead end in cancer cells. OR The PARK10 gene USP24 is a negative regulator of autophagy and ULK1 protein stability OR Coordinate regulation of autophagy and the ubiquitin proteasome system by MTOR." -o titleSearch.XML
+  bapi ncbi --xml2json pubmed titleSearch.XML |grep '"Doi":'|sed 's/",//g'|sed 's/.*"//g'`
 }

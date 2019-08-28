@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/openbiox/butils/log"
 	"github.com/biogo/ncbi"
 	"github.com/biogo/ncbi/entrez"
+	"github.com/openbiox/butils/log"
 )
 
 // Ncbi modified from https://github.com/biogo/ncbi BSD license
@@ -25,7 +25,7 @@ func Ncbi(db string, clQuery string, from int, size int, email string, outfn str
 	}
 	log.Infof("Available retrieve %d records.", s.Count)
 	from, end := setQueryFromEnd(from, size, s.Count)
-	log.Infof("Will retrieve %d records, from %d to %d.", end-from, from, end)
+	log.Infof("Will retrieve %d records, from %d to %d.", end-from, from+1, end)
 
 	var of *os.File
 	of = createIOStream(of, outfn)
@@ -39,7 +39,7 @@ func Ncbi(db string, clQuery string, from int, size int, email string, outfn str
 		p.RetMax = end - from
 	}
 	for p.RetStart = from; p.RetStart < end; p.RetStart += p.RetMax {
-		log.Infof("Attempting to retrieve %d records: %d-%d with %d retries.", p.RetMax, p.RetStart, p.RetMax+p.RetStart, retries)
+		log.Infof("Attempting to retrieve %d records: %d-%d with %d retries.", p.RetMax, p.RetStart+1, p.RetMax+p.RetStart, retries)
 		var t int
 		for t = 0; t < retries; t++ {
 			buf.Reset()
