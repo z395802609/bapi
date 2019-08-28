@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/JhuangLab/bquery/fetch"
-	"github.com/JhuangLab/butils/log"
+	"github.com/openbiox/butils/log"
 	"github.com/spf13/cobra"
 )
 

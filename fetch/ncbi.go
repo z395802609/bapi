@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/JhuangLab/butils/log"
+	"github.com/openbiox/butils/log"
 	"github.com/biogo/ncbi"
 	"github.com/biogo/ncbi/entrez"
 )

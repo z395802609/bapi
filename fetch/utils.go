@@ -12,8 +12,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/JhuangLab/butils"
-	"github.com/JhuangLab/butils/log"
+	"github.com/openbiox/butils"
+	"github.com/openbiox/butils/log"
 	mpb "github.com/vbauerster/mpb/v4"
 	"github.com/vbauerster/mpb/v4/decor"
 )

@@ -19,6 +19,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/onsi/ginkgo v1.9.0 // indirect
 	github.com/onsi/gomega v1.6.0 // indirect
+	github.com/openbiox/butils v0.0.0-20190828041125-5847e0d23036
 	github.com/spf13/cobra v0.0.5
 	github.com/vbauerster/mpb/v4 v4.9.2
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect

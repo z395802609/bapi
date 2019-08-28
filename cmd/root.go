@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/JhuangLab/butils/log"
+	"github.com/openbiox/butils/log"
 	"github.com/spf13/cobra"
 )
 

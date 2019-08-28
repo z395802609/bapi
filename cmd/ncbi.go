@@ -8,8 +8,8 @@ import (
 
 	"github.com/JhuangLab/bquery/fetch"
 	"github.com/JhuangLab/bquery/parse"
-	butils "github.com/JhuangLab/butils"
-	"github.com/JhuangLab/butils/log"
+	butils "github.com/openbiox/butils"
+	"github.com/openbiox/butils/log"
 	"github.com/spf13/cobra"
 )
 

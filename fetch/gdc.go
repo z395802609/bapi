@@ -18,7 +18,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	mpb "github.com/vbauerster/mpb/v4"
 
-	"github.com/JhuangLab/butils/log"
+	"github.com/openbiox/butils/log"
 )
 
 const gdcAPIHost = "https://api.gdc.cancer.gov"

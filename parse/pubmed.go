@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/JhuangLab/butils"
-	"github.com/JhuangLab/butils/log"
+	"github.com/openbiox/butils"
+	"github.com/openbiox/butils/log"
 	"github.com/PuerkitoBio/goquery"
 	jsoniter "github.com/json-iterator/go"
 	prose "gopkg.in/jdkato/prose.v2"
