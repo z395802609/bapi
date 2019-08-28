@@ -23,12 +23,13 @@ type bapiClisT struct {
 	ncbiXML2json string
 	ncbiXMLPaths []string
 	ncbiKeywords string
-	ncbiThread   int
+	thread       int
 	from         int
 	size         int
 	remoteName   bool
 	timeout      int
 	retSleepTime int
+	callCor      bool
 }
 
 var bapiClis = bapiClisT{}
@@ -60,9 +61,9 @@ func init() {
 	bapiClis.version = "v0.1.0"
 	rootCmd.AddCommand(ncbiCmd)
 	rootCmd.AddCommand(gdcCmd)
+	rootCmd.AddCommand(fmtCmd)
 	rootCmd.PersistentFlags().StringVarP(&bapiClis.query, "query", "q", "", "Query specifies the search query for record retrieval (required).")
 	rootCmd.PersistentFlags().StringVarP(&bapiClis.format, "format", "", "", "Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).")
-	rootCmd.PersistentFlags().StringVarP(&bapiClis.outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
 	rootCmd.PersistentFlags().BoolVarP(&bapiClis.quiet, "quiet", "", false, "No log output.")
 	rootCmd.PersistentFlags().IntVarP(&bapiClis.from, "from", "", -1, "Parameters of API control the start item of retrived data.")
 	rootCmd.PersistentFlags().IntVarP(&bapiClis.size, "size", "", -1, "Parameters of API control the lenth of retrived data. Default is auto determined.")

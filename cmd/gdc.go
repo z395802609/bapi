@@ -59,6 +59,7 @@ func init() {
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Token, "token", "", "", "Token to access GDC.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Sort, "sort", "", "", "Sort parameters.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Fields, "fields", "", "", "Fields parameters.")
+	gdcCmd.Flags().StringVarP(&bapiClis.outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout), for gdc and ncbi module.")
 	gdcCmd.Example = `  bapi gdc -p
   bapi gdc -p --json-pretty
   bapi gdc -p -q TARGET-NBL --json-pretty

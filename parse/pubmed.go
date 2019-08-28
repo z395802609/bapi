@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/openbiox/butils"
-	"github.com/openbiox/butils/log"
 	"github.com/PuerkitoBio/goquery"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/openbiox/butils"
+	"github.com/openbiox/butils/log"
 	prose "gopkg.in/jdkato/prose.v2"
 	xurls "mvdan.cc/xurls/v2"
 )
@@ -23,7 +23,7 @@ type PubmedFields struct {
 }
 
 // ParsePubmedXML convert Pubmed XML to json
-func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread int) {
+func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread int, callCor bool) {
 	if len(xmlPaths) == 1 {
 		thread = 1
 	}
@@ -42,9 +42,9 @@ func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread i
 	}
 
 	var buf = &bytes.Buffer{}
-	for _, xmlPath := range xmlPaths {
+	for i, xmlPath := range xmlPaths {
 		sem <- true
-		go func(xmlPath string) {
+		go func(xmlPath string, i int) {
 			defer func() {
 				<-sem
 			}()
@@ -58,11 +58,11 @@ func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread i
 				log.Fatal(err)
 			}
 			htmlDoc.Find("PubmedArticle").Each(func(i int, s *goquery.Selection) {
-				json := getPubmedFields(keywords, s)
+				json := getPubmedFields(keywords, s, callCor)
 				io.Copy(buf, bytes.NewBuffer(json))
 				// fmt.Printf("%s, %s\n%s\n%v\n", pmid, doi, abs, key)
 			})
-		}(xmlPath)
+		}(xmlPath, i)
 	}
 	for i := 0; i < cap(sem); i++ {
 		sem <- true
@@ -72,7 +72,7 @@ func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread i
 	}
 }
 
-func getPubmedFields(keywords []string, s *goquery.Selection) (jsonData []byte) {
+func getPubmedFields(keywords []string, s *goquery.Selection, callCor bool) (jsonData []byte) {
 	year := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Year").Text()
 	month := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Month").Text()
 	day := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Day").Text()
@@ -95,7 +95,7 @@ func getPubmedFields(keywords []string, s *goquery.Selection) (jsonData []byte) 
 
 	doc, err := prose.NewDocument(titleAbs)
 	corela := make(map[string]string)
-	if len(key) > 2 {
+	if len(key) > 2 && callCor {
 		getKeywordsCorleations(doc, keywordsPat, &corela)
 	}
 	if err != nil {
@@ -105,21 +105,22 @@ func getPubmedFields(keywords []string, s *goquery.Selection) (jsonData []byte) 
 	}
 	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-	jsonData, _ = json.MarshalIndent(
-		PubmedFields{
-			Pmid:        pmid,
-			Doi:         doi,
-			Title:       title,
-			Abs:         abs,
-			Journal:     journal,
-			Issn:        issn,
-			Date:        date,
-			Issue:       issue,
-			Volume:      volume,
-			Corelations: corela,
-			URLs:        urls,
-			Keywords:    key,
-		}, "", "   ")
+	obj := make(map[string]PubmedFields)
+	obj[pmid] = PubmedFields{
+		Pmid:        pmid,
+		Doi:         doi,
+		Title:       title,
+		Abs:         abs,
+		Journal:     journal,
+		Issn:        issn,
+		Date:        date,
+		Issue:       issue,
+		Volume:      volume,
+		Corelations: corela,
+		URLs:        urls,
+		Keywords:    key,
+	}
+	jsonData, _ = json.MarshalIndent(obj, "", "  ")
 	return jsonData
 }
 

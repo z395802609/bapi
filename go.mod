@@ -9,6 +9,7 @@ require (
 	github.com/cloudfoundry/bytefmt v0.0.0-20190819182555-854d396b647c
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/jehiah/json2csv v0.0.0-20170322070851-d40f54a3ed9c
 	github.com/json-iterator/go v1.1.7
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mingrammer/commonregex v1.0.0 // indirect
@@ -20,6 +21,7 @@ require (
 	github.com/onsi/gomega v1.6.0 // indirect
 	github.com/openbiox/butils v0.0.0-20190828091546-9669e2695220
 	github.com/spf13/cobra v0.0.5
+	github.com/tidwall/pretty v1.0.0
 	github.com/vbauerster/mpb/v4 v4.9.2
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
 	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56 // indirect
