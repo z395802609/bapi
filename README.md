@@ -1,13 +1,13 @@
-<img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Life cycle: experimental"> [![GoDoc](https://godoc.org/github.com/JhuangLab/bquery?status.svg)](https://godoc.org/github.com/JhuangLab/bquery)
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Life cycle: experimental"> [![GoDoc](https://godoc.org/github.com/Miachol/bapi?status.svg)](https://godoc.org/github.com/Miachol/bapi)
 
-# bquery
+# bapi
 
 - NCBI query
 
 ## Installation
 
 ```bash
-go get -u github.com/JhuangLab/bquery
+go get -u github.com/Miachol/bapi
 ```
 
 ## Usage
@@ -15,11 +15,11 @@ go get -u github.com/JhuangLab/bquery
 **Main interface:**
 
 ```bash
-Query bioinformatics website APIs. More see here https://github.com/JhuangLab/bquery.
+Query bioinformatics website APIs. More see here https://github.com/Miachol/bapi.
 
 Usage:
-  bquery [flags]
-  bquery [command]
+  bapi [flags]
+  bapi [command]
 
 Available Commands:
   gdc         Query GDC portal website APIs.
@@ -30,44 +30,44 @@ Flags:
   -e, --email string    Email specifies the email address to be sent to the server (NCBI website is required). (default "your_email@domain.com")
       --format string   Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).
       --from int        Parameters of API control the start item of retrived data. (default -1)
-  -h, --help            help for bquery
+  -h, --help            help for bapi
   -o, --outfn string    Out specifies destination of the returned data (default to stdout).
   -q, --query string    Query specifies the search query for record retrieval (required).
       --quiet           No log output.
   -r, --retries int     Retry specifies the number of attempts to retrieve the data. (default 5)
       --size int        Parameters of API control the lenth of retrived data. Default is auto determined. (default -1)
-      --version         version for bquery
+      --version         version for bapi
 
-Use "bquery [command] --help" for more information about a command.
+Use "bapi [command] --help" for more information about a command.
 ```
 
 **GDC query:**
 
 ```bash
-Query GDC portal APIs. More see here https://github.com/JhuangLab/bquery.
+Query GDC portal APIs. More see here https://github.com/Miachol/bapi.
 
 Usage:
-  bquery gdc [flags]
+  bapi gdc [flags]
 
 Examples:
-  bquery gdc -p
-  bquery gdc -p --json-pretty
-  bquery gdc -p -q TARGET-NBL --json-pretty
-  bquery gdc -p --format TSV > tcga_projects.tsv
-  bquery gdc -p --format CSV > tcga_projects.csv
-  bquery gdc -p --from 1 --szie 2
-  bquery gdc -s
-  bquery gdc -c
-  bquery gdc -f
-  bquery gdc -a
+  bapi gdc -p
+  bapi gdc -p --json-pretty
+  bapi gdc -p -q TARGET-NBL --json-pretty
+  bapi gdc -p --format TSV > tcga_projects.tsv
+  bapi gdc -p --format CSV > tcga_projects.csv
+  bapi gdc -p --from 1 --szie 2
+  bapi gdc -s
+  bapi gdc -c
+  bapi gdc -f
+  bapi gdc -a
 
   // Download manifest for gdc-client
-  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -o my_manifest.txt
-  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" > my_manifest.txt
-  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -n
+  bapi gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -o my_manifest.txt
+  bapi gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" > my_manifest.txt
+  bapi gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -n
 
   // Download data
-  bquery gdc -d -q "5b2974ad-f932-499b-90a3-93577a9f0573" -n
+  bapi gdc -d -q "5b2974ad-f932-499b-90a3-93577a9f0573" -n
 
 Flags:
   -a, --annotations     Retrive annotations info from GDC portal.
@@ -101,18 +101,18 @@ Global Flags:
 **Query NCBI:**
 
 ```bash
-Query ncbi website APIs. More see here https://github.com/JhuangLab/bquery.
+Query ncbi website APIs. More see here https://github.com/Miachol/bapi.
 
 Usage:
-  bquery ncbi [flags]
+  bapi ncbi [flags]
 
 Examples:
-  bquery ncbi -d pubmed -q B-ALL --format XML -e your_email@domain.com
-  bquery ncbi -q "RNA-seq and bioinformatics[journal]" -e "your_email@domain.com" -m 100 | awk '/<[?]xml version="1.0" [?]>/{close(f); f="abstract.http.XML.tmp" ++c;next} {print>f;}'
+  bapi ncbi -d pubmed -q B-ALL --format XML -e your_email@domain.com
+  bapi ncbi -q "RNA-seq and bioinformatics[journal]" -e "your_email@domain.com" -m 100 | awk '/<[?]xml version="1.0" [?]>/{close(f); f="abstract.http.XML.tmp" ++c;next} {print>f;}'
 
   k="algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org, RNA-Seq, DNA, profile, landscape"
   echo "[" > final.json
-  bquery ncbi --xml2json pubmed abstract.http.XML.tmp* -k "${k}"| sed 's/}{/},{/g' >> final.json
+  bapi ncbi --xml2json pubmed abstract.http.XML.tmp* -k "${k}"| sed 's/}{/},{/g' >> final.json
   echo "]" >> final.json
 
 Flags:

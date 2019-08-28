@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/JhuangLab/bquery/fetch"
+	"github.com/Miachol/bapi/fetch"
 	"github.com/openbiox/butils/log"
 	"github.com/spf13/cobra"
 )
@@ -14,30 +14,30 @@ var endp fetch.GdcEndpoints
 var gdcCmd = &cobra.Command{
 	Use:   "gdc",
 	Short: "Query GDC portal website APIs.",
-	Long:  `Query GDC portal APIs. More see here https://github.com/JhuangLab/bquery.`,
+	Long:  `Query GDC portal APIs. More see here https://github.com/Miachol/bapi.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		gdcCmdRunOptions(cmd)
 	},
 }
 
 func gdcCmdRunOptions(cmd *cobra.Command) {
-	if bqueryClis.quiet {
+	if bapiClis.quiet {
 		log.SetOutput(ioutil.Discard)
 	} else {
 		log.SetOutput(os.Stderr)
 	}
-	endp.ExtraParams.From = bqueryClis.from
-	endp.ExtraParams.Size = bqueryClis.size
-	endp.ExtraParams.Format = bqueryClis.format
-	endp.ExtraParams.Query = bqueryClis.query
+	endp.ExtraParams.From = bapiClis.from
+	endp.ExtraParams.Size = bapiClis.size
+	endp.ExtraParams.Format = bapiClis.format
+	endp.ExtraParams.Query = bapiClis.query
 	if endp.ExtraParams.JSON {
 		endp.ExtraParams.Format = "json"
 	}
 	if endp.Status || endp.Projects || endp.Cases || endp.Files || endp.Annotations || endp.Data || endp.Manifest || endp.Slicing {
-		fetch.Gdc(endp, bqueryClis.outfn, bqueryClis.retries, bqueryClis.timeout, bqueryClis.retSleepTime, bqueryClis.quiet)
-		bqueryClis.helpFlags = false
+		fetch.Gdc(endp, bapiClis.outfn, bapiClis.retries, bapiClis.timeout, bapiClis.retSleepTime, bapiClis.quiet)
+		bapiClis.helpFlags = false
 	}
-	if bqueryClis.helpFlags {
+	if bapiClis.helpFlags {
 		cmd.Help()
 	}
 }
@@ -59,22 +59,22 @@ func init() {
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Token, "token", "", "", "Token to access GDC.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Sort, "sort", "", "", "Sort parameters.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Fields, "fields", "", "", "Fields parameters.")
-	gdcCmd.Example = `  bquery gdc -p
-  bquery gdc -p --json-pretty
-  bquery gdc -p -q TARGET-NBL --json-pretty
-  bquery gdc -p --format TSV > tcga_projects.tsv
-  bquery gdc -p --format CSV > tcga_projects.csv
-  bquery gdc -p --from 1 --szie 2
-  bquery gdc -s
-  bquery gdc -c
-  bquery gdc -f
-  bquery gdc -a
+	gdcCmd.Example = `  bapi gdc -p
+  bapi gdc -p --json-pretty
+  bapi gdc -p -q TARGET-NBL --json-pretty
+  bapi gdc -p --format TSV > tcga_projects.tsv
+  bapi gdc -p --format CSV > tcga_projects.csv
+  bapi gdc -p --from 1 --szie 2
+  bapi gdc -s
+  bapi gdc -c
+  bapi gdc -f
+  bapi gdc -a
 
   // Download manifest for gdc-client
-  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -o my_manifest.txt 
-  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" > my_manifest.txt
-  bquery gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -n
+  bapi gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -o my_manifest.txt 
+  bapi gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" > my_manifest.txt
+  bapi gdc -m -q "5b2974ad-f932-499b-90a3-93577a9f0573,556e5e3f-0ab9-4b6c-aa62-c42f6a6cf20c" -n
 	
   // Download data
-  bquery gdc -d -q "5b2974ad-f932-499b-90a3-93577a9f0573" -n`
+  bapi gdc -d -q "5b2974ad-f932-499b-90a3-93577a9f0573" -n`
 }

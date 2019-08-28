@@ -15,7 +15,7 @@
 package main
 
 import (
-	"github.com/JhuangLab/bquery/cmd"
+	"github.com/Miachol/bapi/cmd"
 )
 
 func main() {
