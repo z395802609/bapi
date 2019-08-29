@@ -9,7 +9,6 @@ require (
 	github.com/cloudfoundry/bytefmt v0.0.0-20190819182555-854d396b647c
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/jehiah/json2csv v0.0.0-20170322070851-d40f54a3ed9c
 	github.com/json-iterator/go v1.1.7
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mingrammer/commonregex v1.0.0 // indirect

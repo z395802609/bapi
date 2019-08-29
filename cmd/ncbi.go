@@ -72,5 +72,5 @@ func init() {
   bapi ncbi -q "Galectins control MTOR and AMPK in response to lysosomal damage to induce autophagy OR MTOR-independent autophagy induced by interrupted endoplasmic reticulum-mitochondrial Ca2+ communication: a dead end in cancer cells. OR The PARK10 gene USP24 is a negative regulator of autophagy and ULK1 protein stability OR Coordinate regulation of autophagy and the ubiquitin proteasome system by MTOR." -o titleSearch.XML
   bapi ncbi --xml2json pubmed titleSearch.XML -k "${k}" --call-cor | sed 's;}{;,;g' > final.json
   bapi fmt --json-to-slice final.json
-  json2csv -i final.json -o final.csv`
+  json2csv -i final.slice.json -o final.csv`
 }
