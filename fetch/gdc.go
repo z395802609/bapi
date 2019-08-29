@@ -2,97 +2,65 @@ package fetch
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"mime"
-	"net"
 	"net/http"
 	"os"
-	"path"
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cloudfoundry/bytefmt"
 	"github.com/olekukonko/tablewriter"
-	mpb "github.com/vbauerster/mpb/v4"
 
 	"github.com/openbiox/butils/log"
 )
 
-const gdcAPIHost = "https://api.gdc.cancer.gov"
-const gdcAPIHostLegacy = "https://api.gdc.cancer.gov/legacy"
+const GdcAPIHost = "https://api.gdc.cancer.gov"
+const GdcAPIHostLegacy = "https://api.gdc.cancer.gov/legacy"
 
-var endpoints = []string{"status", "projects", "cases", "files", "annotations",
+var gdcapis = []string{"status", "projects", "cases", "files", "annotations",
 	"data", "manifest", "slicing"}
 
-var tables []*tablewriter.Table
-var pg *mpb.Progress
-
 // Gdc accesss https://api.gdc.cancer.gov data
-func Gdc(endpoint GdcEndpoints, outfn string, retries int, timeout int, retSleepTime int, quite bool) {
-	client := &http.Client{
-		Transport: &http.Transport{
-			Dial: (&net.Dialer{
-				Timeout: time.Duration(timeout) * time.Second,
-			}).Dial,
-		},
-	}
-	host := gdcAPIHost
+func Gdc(endpoint *GdcEndpoints, outfn string, retries int, timeout int, retSleepTime int, quite bool) {
+	client := newHTTPClient(timeout)
+	host := GdcAPIHost
 	if endpoint.Legacy {
-		host = gdcAPIHostLegacy
+		host = GdcAPIHostLegacy
 	}
-	v := reflect.ValueOf(endpoint)
+	v := reflect.ValueOf(*endpoint)
 	count := v.NumField()
 	var req *http.Request
 	var queryFlag string
 	for i := 0; i < count; i++ {
-		if i > len(endpoints) {
+		if i > len(gdcapis) {
 			continue
 		}
 		queryFlag = ""
 		f := v.Field(i)
 		if f.Kind() == reflect.String && f.String() != "" {
-			req, queryFlag = setGdcReq(host, i, &endpoint)
+			req, queryFlag = setGdcReq(host, i, endpoint)
 		} else if f.Kind() == reflect.Bool && f.Bool() {
-			req, queryFlag = setGdcReq(host, i, &endpoint)
+			req, queryFlag = setGdcReq(host, i, endpoint)
 		}
 		if queryFlag == "" {
 			continue
 		}
 		log.Infof("Query GDC portal %s API: %s.", queryFlag, req.URL.String())
-		resp, err := client.Do(req)
-		if resp.StatusCode != http.StatusOK {
-			log.Warnf("Access failed: %s", host+"/"+endpoints[i])
-			fmt.Println("")
+		var resp *http.Response
+		resp, err := retryClient(client, req, retries, retSleepTime)
+		if err != nil {
 			return
 		}
-		contentDis := resp.Header.Get("Content-Disposition")
-		if outfn == "" && contentDis != "" && endpoint.ExtraParams.RemoteName &&
-			strings.Contains(contentDis, "filename") {
-			_, params, err := mime.ParseMediaType(contentDis)
-			if err != nil {
-				log.Warn(err)
-			} else {
-				outfn = params["filename"]
-			}
+		if resp != nil {
+			defer resp.Body.Close()
+		} else {
+			return
 		}
+		outfn = parseOutfnFromHeader(outfn, resp, endpoint.ExtraParams.RemoteName)
 
 		defer resp.Body.Close()
-
-		var of *os.File
-		if outfn == "" {
-			of = os.Stdout
-		} else {
-			of, err := os.OpenFile(outfn, os.O_CREATE|os.O_WRONLY, 0664)
-			if err != nil {
-				log.Fatalf("error: %v", err)
-			}
-			defer of.Close()
-			wd, _ := os.Getwd()
-			log.Infof("Trying %s => %s", req.URL.String(), path.Join(wd, outfn))
-		}
+		of := creatOutStream(outfn, req.URL.String())
 		if outfn != "" && endpoint.Data || endpoint.Slicing {
 			err = HTTPDownload(req.URL.String(), outfn, pg, quite, false, retries, timeout, retSleepTime)
 			if err != nil {
@@ -107,17 +75,17 @@ func Gdc(endpoint GdcEndpoints, outfn string, retries int, timeout int, retSleep
 			}
 			return
 		}
-		postGdcQuery(&queryFlag, resp, &endpoint, of)
+		defer of.Close()
+		postGdcQuery(&queryFlag, resp, endpoint, of)
 	}
 }
 
 func setGdcReq(host string, i int, endpoint *GdcEndpoints) (*http.Request, string) {
-	queryFlag := endpoints[i]
+	queryFlag := gdcapis[i]
 	suffix := setGdcQuerySuffix(queryFlag, endpoint)
 	method := "GET"
-	req, err := http.NewRequest(method, host+"/"+endpoints[i]+suffix, nil)
-	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
+	req, err := http.NewRequest(method, host+"/"+gdcapis[i]+suffix, nil)
+	setReqHeader(req)
 	if err != nil {
 		log.Warn(err)
 	}
@@ -328,11 +296,4 @@ func newCmdlineRenderTable(header []string, of *os.File) (table *tablewriter.Tab
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetHeader(header)
 	return table
-}
-
-func init() {
-	pg = mpb.New(
-		mpb.WithWidth(45),
-		mpb.WithRefreshRate(180*time.Millisecond),
-	)
 }

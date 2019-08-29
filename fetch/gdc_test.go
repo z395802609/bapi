@@ -10,5 +10,5 @@ func TestGdc(t *testing.T) {
 	endp.Cases = true
 	endp.Files = true
 	endp.Annotations = true
-	Gdc(endp, "", 2, 2, 2, false)
+	Gdc(&endp, "", 2, 2, 2, false)
 }

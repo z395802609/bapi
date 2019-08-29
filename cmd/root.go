@@ -62,6 +62,7 @@ func init() {
 	rootCmd.AddCommand(ncbiCmd)
 	rootCmd.AddCommand(gdcCmd)
 	rootCmd.AddCommand(fmtCmd)
+	rootCmd.AddCommand(dataset2toolsCmd)
 	rootCmd.PersistentFlags().StringVarP(&bapiClis.query, "query", "q", "", "Query specifies the search query for record retrieval (required).")
 	rootCmd.PersistentFlags().StringVarP(&bapiClis.format, "format", "", "", "Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).")
 	rootCmd.PersistentFlags().BoolVarP(&bapiClis.quiet, "quiet", "", false, "No log output.")

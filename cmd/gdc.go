@@ -34,7 +34,7 @@ func gdcCmdRunOptions(cmd *cobra.Command) {
 		endp.ExtraParams.Format = "json"
 	}
 	if endp.Status || endp.Projects || endp.Cases || endp.Files || endp.Annotations || endp.Data || endp.Manifest || endp.Slicing {
-		fetch.Gdc(endp, bapiClis.outfn, bapiClis.retries, bapiClis.timeout, bapiClis.retSleepTime, bapiClis.quiet)
+		fetch.Gdc(&endp, bapiClis.outfn, bapiClis.retries, bapiClis.timeout, bapiClis.retSleepTime, bapiClis.quiet)
 		bapiClis.helpFlags = false
 	}
 	if bapiClis.helpFlags {
@@ -59,7 +59,7 @@ func init() {
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Token, "token", "", "", "Token to access GDC.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Sort, "sort", "", "", "Sort parameters.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Fields, "fields", "", "", "Fields parameters.")
-	gdcCmd.Flags().StringVarP(&bapiClis.outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout), for gdc and ncbi module.")
+	gdcCmd.Flags().StringVarP(&bapiClis.outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
 	gdcCmd.Example = `  bapi gdc -p
   bapi gdc -p --json-pretty
   bapi gdc -p -q TARGET-NBL --json-pretty

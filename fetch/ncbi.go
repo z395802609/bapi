@@ -27,8 +27,7 @@ func Ncbi(db string, clQuery string, from int, size int, email string, outfn str
 	from, end := setQueryFromEnd(from, size, s.Count)
 	log.Infof("Will retrieve %d records, from %d to %d.", end-from, from+1, end)
 
-	var of *os.File
-	of = createIOStream(of, outfn)
+	of := creatOutStream(outfn, "")
 	defer of.Close()
 	var (
 		buf   = &bytes.Buffer{}

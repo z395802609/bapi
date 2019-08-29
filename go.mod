@@ -7,6 +7,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/biogo/ncbi v1.0.2
 	github.com/cloudfoundry/bytefmt v0.0.0-20190819182555-854d396b647c
+	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/json-iterator/go v1.1.7

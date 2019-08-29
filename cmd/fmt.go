@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"io/ioutil"
@@ -14,13 +15,15 @@ import (
 )
 
 type fmtClisT struct {
+	stdin      []byte
 	files      []string
 	json       map[int]map[string]interface{}
 	table      map[int][]interface{}
-	fmtJSON    bool
+	prettyJSON bool
 	json2slice bool
 	json2csv   bool
 	thread     int
+	indent     string
 }
 
 var fmtClis = fmtClisT{}
@@ -40,13 +43,31 @@ func fmtCmdRunOptions(cmd *cobra.Command) {
 		log.SetOutput(os.Stderr)
 	}
 
-	if len(cmd.Flags().Args()) >= 1 {
-		fmtClis.files = cmd.Flags().Args()
-		if fmtClis.fmtJSON {
-			fmtJson()
+	cleanArgs := []string{}
+	hasStdin := false
+	if cleanArgs, hasStdin = checkStdInFlag(cmd); hasStdin {
+		reader := bufio.NewReader(os.Stdin)
+		result, err := reader.ReadString('\n')
+		if err == nil {
+			log.Fatal(err)
+		} else if result != "" {
+			fmtClis.stdin = []byte(result)
+		}
+	}
+
+	if len(cleanArgs) >= 1 || hasStdin {
+		fmtClis.files = cleanArgs
+		runFlag := false
+		if fmtClis.prettyJSON {
+			prettyJSON()
+			runFlag = true
 		}
 		if fmtClis.json2slice {
 			JSON2Slice()
+			runFlag = true
+		}
+		if !runFlag {
+			io.Copy(os.Stdout, bytes.NewBuffer(fmtClis.stdin))
 		}
 		bapiClis.helpFlags = false
 	}
@@ -55,18 +76,30 @@ func fmtCmdRunOptions(cmd *cobra.Command) {
 	}
 }
 
+func checkStdInFlag(cmd *cobra.Command) (args []string, hasStdin bool) {
+	for _, v := range cmd.Flags().Args() {
+		if v != "-" {
+			args = append(args, v)
+		} else {
+			hasStdin = true
+		}
+	}
+	return args, hasStdin
+}
+
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-func fmtJson() {
+func prettyJSON() {
 	sem := make(chan bool, bapiClis.thread)
+	var m map[string]interface{}
+	m = make(map[string]interface{})
+	var d []byte
 	for k, fn := range fmtClis.files {
 		sem <- true
 		go func(fn string, k int) {
 			defer func() {
 				<-sem
 			}()
-			var m map[string]interface{}
-			m = make(map[string]interface{})
 			outfn := butils.StrReplaceAll(fn, "json$", "pretty.json")
 			fmtClis.files[k] = outfn
 			d, err := ioutil.ReadFile(fn)
@@ -82,6 +115,14 @@ func fmtJson() {
 	}
 	for i := 0; i < cap(sem); i++ {
 		sem <- true
+	}
+	if len(fmtClis.stdin) > 0 {
+		var m2 map[string]interface{}
+		m2 = make(map[string]interface{})
+		json.Unmarshal(fmtClis.stdin, &m2)
+		d = pretty.Pretty(fmtClis.stdin)
+		fmtClis.json[-1] = m2
+		io.Copy(os.Stdout, bytes.NewBuffer(d))
 	}
 }
 
@@ -115,7 +156,7 @@ func JSON2Slice() {
 			}
 			fmtClis.table[k] = final
 			if j != "" {
-				d, _ = json.MarshalIndent(final, "", "      ")
+				d, _ = json.MarshalIndent(final, "", fmtClis.indent)
 				d = pretty.Pretty(d)
 				f, err := os.OpenFile(outfn, os.O_RDWR|os.O_CREATE, 0664)
 				if err != nil {
@@ -132,7 +173,8 @@ func JSON2Slice() {
 }
 
 func init() {
-	fmtCmd.Flags().BoolVarP(&fmtClis.fmtJSON, "json", "", false, "fmt input json files.")
+	fmtCmd.Flags().StringVarP(&fmtClis.indent, "indent", "", "    ", "Control the indent of output json files.")
+	fmtCmd.Flags().BoolVarP(&fmtClis.prettyJSON, "json-pretty", "", false, "Pretty json files.")
 	fmtCmd.Flags().BoolVarP(&fmtClis.json2slice, "json-to-slice", "", false, "Convert key-value JSON  to []key-value and easy to export to readable table.")
 	fmtClis.json = make(map[int]map[string]interface{})
 	fmtClis.table = make(map[int][]interface{})

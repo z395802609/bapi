@@ -1,39 +1,31 @@
 package fetch
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/http/cookiejar"
 	"os"
 	"path/filepath"
-	"time"
 	"unicode/utf8"
 
+	"errors"
+	"mime"
+	"net/http/cookiejar"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/openbiox/butils"
-	"github.com/openbiox/butils/log"
 	mpb "github.com/vbauerster/mpb/v4"
 	"github.com/vbauerster/mpb/v4/decor"
+
+	"github.com/openbiox/butils/log"
 )
 
+var pg *mpb.Progress
 var gCurCookies []*http.Cookie
 var gCurCookieJar *cookiejar.Jar
-
-func createIOStream(of *os.File, outfn string) *os.File {
-	var err error
-	if outfn == "" {
-		of = os.Stdout
-	} else {
-		of, err = os.OpenFile(outfn, os.O_CREATE|os.O_WRONLY, 0664)
-		if err != nil {
-			log.Fatalf("error: %v", err)
-		}
-		of.Name()
-	}
-	return of
-}
 
 func setQueryFromEnd(from int, size int, total int) (int, int) {
 	if size == -1 {
@@ -52,13 +44,6 @@ func setQueryFromEnd(from int, size int, total int) (int, int) {
 		end = from + 1
 	}
 	return from, end
-}
-
-func defaultCheckRedirect(req *http.Request, via []*http.Request) error {
-	if len(via) >= 20 {
-		return errors.New("stopped after 20 redirects")
-	}
-	return nil
 }
 
 // HTTPDownload can use golang http.Get to query URL with progress bar
@@ -172,7 +157,89 @@ func downloadWorker(client *http.Client, req *http.Request, url string, destFn s
 	return nil
 }
 
+func defaultCheckRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= 20 {
+		return errors.New("stopped after 20 redirects")
+	}
+	return nil
+}
+
+func newHTTPClient(timeout int) *http.Client {
+	return &http.Client{
+		CheckRedirect: defaultCheckRedirect,
+		Jar:           gCurCookieJar,
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: time.Duration(timeout) * time.Second,
+			}).Dial,
+		},
+	}
+}
+func setReqHeader(req *http.Request) {
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36")
+}
+
+func retryClient(client *http.Client, req *http.Request, retries int, retSleepTime int) (resp *http.Response, err error) {
+	for t := 0; t < retries; t++ {
+		resp, err = client.Do(req)
+		if err != nil {
+			log.Warnf("Failed to retrieve on attempt %d... error: %v ... retrying after %d seconds.", t+1, err, retSleepTime)
+			time.Sleep(time.Duration(retSleepTime) * time.Second)
+			continue
+		} else if err2 := checkResp(resp); err2 != nil {
+			return nil, err2
+		} else {
+			break
+		}
+	}
+	return resp, err
+}
+
+func parseOutfnFromHeader(outfn string, resp *http.Response, useRemoteName bool) string {
+	contentDis := resp.Header.Get("Content-Disposition")
+	if outfn == "" && contentDis != "" && useRemoteName &&
+		strings.Contains(contentDis, "filename") {
+		_, params, err := mime.ParseMediaType(contentDis)
+		if err != nil {
+			log.Warn(err)
+		} else {
+			outfn = params["filename"]
+		}
+	}
+	return outfn
+}
+
+// set of as standout or file
+func creatOutStream(outfn string, url string) *os.File {
+	var of *os.File
+	if outfn == "" {
+		of = os.Stdout
+	} else {
+		var err error
+		of, err = os.OpenFile(outfn, os.O_CREATE|os.O_WRONLY, 0664)
+		if err != nil {
+			log.Fatalf("error: %v", err)
+		}
+		wd, _ := os.Getwd()
+		if url != "" {
+			log.Infof("Trying %s => %s", url, path.Join(wd, outfn))
+		}
+	}
+	return of
+}
+
+func checkResp(resp *http.Response) (err error) {
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(fmt.Sprintf("access failed: %s", resp.Request.URL.String()))
+	}
+	return nil
+}
 func init() {
+	pg = mpb.New(
+		mpb.WithWidth(45),
+		mpb.WithRefreshRate(180*time.Millisecond),
+	)
 	gCurCookies = nil
 	//var err error;
 	gCurCookieJar, _ = cookiejar.New(nil)
