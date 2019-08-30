@@ -30,6 +30,7 @@ func gdcCmdRunOptions(cmd *cobra.Command) {
 	endp.ExtraParams.Size = bapiClis.size
 	endp.ExtraParams.Format = bapiClis.format
 	endp.ExtraParams.Query = bapiClis.query
+	endp.ExtraParams.Pretty = fmtClis.prettyJSON
 	if endp.ExtraParams.JSON {
 		endp.ExtraParams.Format = "json"
 	}
@@ -52,7 +53,6 @@ func init() {
 	gdcCmd.Flags().BoolVarP(&endp.Data, "data", "d", false, "Retrive /data from GDC portal.")
 	gdcCmd.Flags().BoolVarP(&endp.Manifest, "manifest", "m", false, "Retrive /manifest data from GDC portal.")
 	gdcCmd.Flags().BoolVarP(&endp.Slicing, "slicing", "", false, "Retrive BAM slicing from GDC portal.")
-	gdcCmd.Flags().BoolVarP(&endp.ExtraParams.Pretty, "json-pretty", "", false, "Retrive pretty JSON data.")
 	gdcCmd.Flags().BoolVarP(&endp.ExtraParams.JSON, "json", "", false, "Retrive JSON data.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Filter, "filter", "", "", "Retrive data with GDC filter.")
 	gdcCmd.Flags().BoolVarP(&endp.Legacy, "legacy", "l", false, "Use legacy API of GDC portal.")

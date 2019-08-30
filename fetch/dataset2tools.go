@@ -1,18 +1,21 @@
 package fetch
 
 import (
+	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/openbiox/butils/log"
+	"github.com/tidwall/pretty"
 )
 
 const Dataset2toolsHost = "http://amp.pharm.mssm.edu/datasets2tools/api/search?"
 
 // Dataset2tools access http://amp.pharm.mssm.edu/datasets2tools/ API
-func Dataset2tools(endpoints *Datasets2toolsEndpoints, outfn string, retries int, timeout int, retSleepTime int, quite bool) {
+func Dataset2tools(endpoints *Datasets2toolsEndpoints, outfn string, jsonPretty bool, indent *string, sortKey bool, retries int, timeout int, retSleepTime int, quite bool) {
 	url := Dataset2toolsHost + setDatasets2toolsQuerySuffix(endpoints)
 	client := newHTTPClient(timeout)
 	method := "GET"
@@ -32,7 +35,15 @@ func Dataset2tools(endpoints *Datasets2toolsEndpoints, outfn string, retries int
 		return
 	}
 	of := creatOutStream(outfn, req.URL.String())
-	_, err = io.Copy(of, resp.Body)
+	buf, _ := ioutil.ReadAll(resp.Body)
+	if jsonPretty {
+		opt := pretty.Options{
+			Indent:   *indent,
+			SortKeys: sortKey,
+		}
+		buf = pretty.PrettyOptions(buf, &opt)
+	}
+	_, err = io.Copy(of, bytes.NewBuffer(buf))
 	if err != nil {
 		log.Warn(err)
 	}
