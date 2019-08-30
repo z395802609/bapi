@@ -8,24 +8,12 @@ import (
 	"os"
 
 	"github.com/Miachol/bapi/format"
+	"github.com/Miachol/bapi/types"
 	"github.com/openbiox/butils/log"
 	"github.com/spf13/cobra"
 )
 
-type fmtClisT struct {
-	stdin      []byte
-	files      []string
-	json       map[int]map[string]interface{}
-	table      map[int][]interface{}
-	prettyJSON bool
-	json2slice bool
-	json2csv   bool
-	thread     int
-	indent     string
-	sortKey    bool
-}
-
-var fmtClis = fmtClisT{}
+var fmtClis = types.FmtClisT{}
 var fmtCmd = &cobra.Command{
 	Use:   "fmt [input1 input2]",
 	Short: "A set of file format (fmt) command of bapi.",
@@ -36,12 +24,6 @@ var fmtCmd = &cobra.Command{
 }
 
 func fmtCmdRunOptions(cmd *cobra.Command) {
-	if bapiClis.quiet {
-		log.SetOutput(ioutil.Discard)
-	} else {
-		log.SetOutput(os.Stderr)
-	}
-
 	cleanArgs := []string{}
 	hasStdin := false
 	if cleanArgs, hasStdin = checkStdInFlag(cmd); hasStdin {
@@ -50,26 +32,26 @@ func fmtCmdRunOptions(cmd *cobra.Command) {
 		if err != nil {
 			log.Fatal(err)
 		} else if len(result) > 0 {
-			fmtClis.stdin = result
+			fmtClis.Stdin = result
 		}
 	}
 
 	if len(cleanArgs) >= 1 || hasStdin {
-		fmtClis.files = cleanArgs
+		fmtClis.Files = cleanArgs
 		runFlag := false
-		if fmtClis.prettyJSON {
-			format.PrettyJSON(&fmtClis.files, &(fmtClis.stdin), &(fmtClis.json), fmtClis.thread, &fmtClis.indent, fmtClis.sortKey)
+		if fmtClis.PrettyJSON {
+			format.PrettyJSON(&fmtClis, bapiClis.Thread)
 			runFlag = true
-		} else if fmtClis.json2slice {
-			format.JSON2Slice(fmtClis.files, &(fmtClis.stdin), &(fmtClis.json), &(fmtClis.table), fmtClis.thread, &fmtClis.indent, fmtClis.sortKey)
+		} else if fmtClis.JSONToSlice {
+			format.JSON2Slice(&fmtClis, bapiClis.Thread)
 			runFlag = true
 		}
 		if !runFlag && hasStdin {
-			io.Copy(os.Stdout, bytes.NewBuffer(fmtClis.stdin))
+			io.Copy(os.Stdout, bytes.NewBuffer(fmtClis.Stdin))
 		}
-		bapiClis.helpFlags = false
+		bapiClis.HelpFlags = false
 	}
-	if bapiClis.helpFlags {
+	if bapiClis.HelpFlags {
 		cmd.Help()
 	}
 }
@@ -86,8 +68,8 @@ func checkStdInFlag(cmd *cobra.Command) (args []string, hasStdin bool) {
 }
 
 func init() {
-	fmtCmd.Flags().IntVarP(&fmtClis.thread, "thread", "t", 1, "Thread to process.")
-	fmtCmd.Flags().BoolVarP(&fmtClis.json2slice, "json-to-slice", "", false, "Convert key-value JSON  to []key-value and easy to export to readable table.")
-	fmtClis.json = make(map[int]map[string]interface{})
-	fmtClis.table = make(map[int][]interface{})
+	fmtCmd.Flags().IntVarP(&bapiClis.Thread, "thread", "t", 1, "Thread to process.")
+	fmtCmd.Flags().BoolVarP(&fmtClis.JSONToSlice, "json-to-slice", "", false, "Convert key-value JSON  to []key-value and easy to export to readable table.")
+	fmtClis.JSON = make(map[int]map[string]interface{})
+	fmtClis.Table = make(map[int][]interface{})
 }

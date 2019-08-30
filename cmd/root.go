@@ -4,35 +4,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 
+	"github.com/Miachol/bapi/types"
+	cio "github.com/openbiox/butils/io"
 	"github.com/openbiox/butils/log"
 	"github.com/spf13/cobra"
 )
 
-type bapiClisT struct {
-	quiet        bool
-	helpFlags    bool
-	version      string
-	ncbiDB       string
-	ncbiRetmax   int
-	retries      int
-	query        string
-	format       string
-	outfn        string
-	email        string
-	ncbiXML2json string
-	ncbiXMLPaths []string
-	ncbiKeywords string
-	thread       int
-	from         int
-	size         int
-	remoteName   bool
-	timeout      int
-	retSleepTime int
-	callCor      bool
-}
-
-var bapiClis = bapiClisT{}
+var bapiClis = types.BapiClisT{}
 
 var rootCmd = &cobra.Command{
 	Use:   "bapi",
@@ -56,36 +36,41 @@ func Execute() {
 }
 
 func init() {
-	bapiClis.quiet = false
-	bapiClis.helpFlags = true
-	bapiClis.version = "v0.1.0"
+	bapiClis.Quiet = false
+	bapiClis.HelpFlags = true
+	bapiClis.Version = "v0.1.0"
 	rootCmd.AddCommand(ncbiCmd)
 	rootCmd.AddCommand(gdcCmd)
 	rootCmd.AddCommand(fmtCmd)
 	rootCmd.AddCommand(dataset2toolsCmd)
-	rootCmd.PersistentFlags().StringVarP(&bapiClis.query, "query", "q", "", "Query specifies the search query for record retrieval (required).")
-	rootCmd.PersistentFlags().StringVarP(&bapiClis.format, "format", "", "", "Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).")
-	rootCmd.PersistentFlags().BoolVarP(&bapiClis.quiet, "quiet", "", false, "No log output.")
-	rootCmd.PersistentFlags().IntVarP(&bapiClis.from, "from", "", -1, "Parameters of API control the start item of retrived data.")
-	rootCmd.PersistentFlags().IntVarP(&bapiClis.size, "size", "", -1, "Parameters of API control the lenth of retrived data. Default is auto determined.")
-	rootCmd.PersistentFlags().StringVarP(&bapiClis.email, "email", "e", "your_email@domain.com", "Email specifies the email address to be sent to the server (NCBI website is required).")
-	rootCmd.PersistentFlags().IntVarP(&bapiClis.retries, "retries", "r", 5, "Retry specifies the number of attempts to retrieve the data.")
-	rootCmd.PersistentFlags().IntVarP(&bapiClis.timeout, "timeout", "", 35, "Set the timeout of per request.")
-	rootCmd.PersistentFlags().IntVarP(&bapiClis.retSleepTime, "retries-sleep-time", "", 5, "Sleep time after one retry.")
-	rootCmd.PersistentFlags().StringVarP(&fmtClis.indent, "indent", "", "    ", "Control the indent of output json files.")
-	rootCmd.PersistentFlags().BoolVarP(&fmtClis.sortKey, "sort-key", "", false, "Control wheather to sort JSON key.")
-	rootCmd.PersistentFlags().BoolVarP(&fmtClis.prettyJSON, "json-pretty", "", false, "Pretty json files.")
+	rootCmd.PersistentFlags().StringVarP(&bapiClis.Query, "query", "q", "", "Query specifies the search query for record retrieval (required).")
+	rootCmd.PersistentFlags().StringVarP(&bapiClis.Format, "format", "", "", "Rettype specifies the format of the returned data (CSV, TSV, JSON for gdc; XML/TEXT for ncbi).")
+	rootCmd.PersistentFlags().BoolVarP(&bapiClis.Quiet, "quiet", "", false, "No log output.")
+	rootCmd.PersistentFlags().IntVarP(&bapiClis.From, "from", "", -1, "Parameters of API control the start item of retrived data.")
+	rootCmd.PersistentFlags().IntVarP(&bapiClis.Size, "size", "", -1, "Parameters of API control the lenth of retrived data. Default is auto determined.")
+	rootCmd.PersistentFlags().StringVarP(&bapiClis.Email, "email", "e", "your_email@domain.com", "Email specifies the email address to be sent to the server (NCBI website is required).")
+	rootCmd.PersistentFlags().IntVarP(&bapiClis.Retries, "retries", "r", 5, "Retry specifies the number of attempts to retrieve the data.")
+	rootCmd.PersistentFlags().IntVarP(&bapiClis.Timeout, "timeout", "", 35, "Set the timeout of per request.")
+	rootCmd.PersistentFlags().IntVarP(&bapiClis.RetSleepTime, "retries-sleep-time", "", 5, "Sleep time after one retry.")
+	rootCmd.PersistentFlags().IntVarP(&fmtClis.Indent, "indent", "", 4, "Control the indent of output json files.")
+	rootCmd.PersistentFlags().BoolVarP(&fmtClis.SortKeys, "sort-keys", "", false, "Control wheather to sort JSON key.")
+	rootCmd.PersistentFlags().BoolVarP(&fmtClis.PrettyJSON, "json-pretty", "", false, "Pretty json files.")
 
-	rootCmd.Version = bapiClis.version
+	rootCmd.Version = bapiClis.Version
 }
 
 func rootCmdRunOptions(cmd *cobra.Command) {
-	if bapiClis.quiet {
+	if bapiClis.Quiet {
 		log.SetOutput(ioutil.Discard)
 	} else {
 		log.SetOutput(os.Stderr)
 	}
-	if bapiClis.helpFlags {
+	if hasDir, _ := cio.PathExists(bapiClis.Outfn); bapiClis.Outfn != "" && !hasDir {
+		if err := cio.CreateDir(path.Dir(bapiClis.Outfn)); err != nil {
+			log.FATAL(fmt.Sprintf("Could not to create %s", path.Dir(bapiClis.Outfn)))
+		}
+	}
+	if bapiClis.HelpFlags {
 		cmd.Help()
 	}
 }

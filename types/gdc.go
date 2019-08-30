@@ -1,4 +1,4 @@
-package fetch
+package types
 
 type GdcEndpoints struct {
 	Status      bool
@@ -165,16 +165,4 @@ type GdcAnnotations struct {
 		} `json:"pagination"`
 	} `json:"data"`
 	Warnings struct{} `json:"warnings"`
-}
-
-// Datasets2toolsEndpoints fro Datasets2tools endpoints
-type Datasets2toolsEndpoints struct {
-	ObjectType              string
-	PageSize                int
-	DatasetAccession        string
-	CannedAnalysisAccession string
-	Query                   string
-	ToolName                string
-	DiseaseName             string
-	Gneset                  string
 }

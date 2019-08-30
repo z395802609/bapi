@@ -1,17 +1,14 @@
 package cmd
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
-
 	"github.com/Miachol/bapi/fetch"
 	"github.com/Miachol/bapi/parse"
-	butils "github.com/openbiox/butils"
-	"github.com/openbiox/butils/log"
+	"github.com/Miachol/bapi/types"
+	"github.com/openbiox/butils/stringo"
 	"github.com/spf13/cobra"
 )
+
+var ncbiClis types.NcbiClisT
 
 var ncbiCmd = &cobra.Command{
 	Use:   "ncbi",
@@ -23,45 +20,35 @@ var ncbiCmd = &cobra.Command{
 }
 
 func ncbiCmdRunOptions(cmd *cobra.Command) {
-	if bapiClis.quiet {
-		log.SetOutput(ioutil.Discard)
-	} else {
-		log.SetOutput(os.Stderr)
+	if bapiClis.Format == "" {
+		bapiClis.Format = "XML"
 	}
-	if bapiClis.format == "" {
-		bapiClis.format = "XML"
+	if bapiClis.Email != "" && bapiClis.Query != "" {
+		fetch.Ncbi(&bapiClis, &ncbiClis)
+		bapiClis.HelpFlags = false
 	}
-	if hasDir, _ := butils.PathExists(bapiClis.outfn); bapiClis.outfn != "" && !hasDir {
-		if err := butils.CreateDir(path.Dir(bapiClis.outfn)); err != nil {
-			log.FATAL(fmt.Sprintf("Could not to create %s", path.Dir(bapiClis.outfn)))
-		}
-	}
-	if bapiClis.email != "" && bapiClis.query != "" {
-		fetch.Ncbi(bapiClis.ncbiDB, bapiClis.query, bapiClis.from, bapiClis.size, bapiClis.email, bapiClis.outfn, bapiClis.format, bapiClis.ncbiRetmax, bapiClis.retries, bapiClis.timeout, bapiClis.retSleepTime)
-		bapiClis.helpFlags = false
-	}
-	if bapiClis.ncbiXML2json == "pubmed" {
+	if ncbiClis.NcbiXMLToJSON == "pubmed" {
 		if len(cmd.Flags().Args()) >= 1 {
-			bapiClis.ncbiXMLPaths = append(bapiClis.ncbiXMLPaths, cmd.Flags().Args()...)
-			keywordsList := butils.StrSplit(bapiClis.ncbiKeywords, ", |,", 10000)
-			parse.ParsePubmedXML(bapiClis.ncbiXMLPaths, bapiClis.outfn, keywordsList, bapiClis.thread, bapiClis.callCor)
+			ncbiClis.NcbiXMLPaths = append(ncbiClis.NcbiXMLPaths, cmd.Flags().Args()...)
+			keywordsList := stringo.StrSplit(ncbiClis.NcbiKeywords, ", |,", 10000)
+			parse.ParsePubmedXML(ncbiClis.NcbiXMLPaths, bapiClis.Outfn, keywordsList, bapiClis.Thread, bapiClis.CallCor)
 		}
-		bapiClis.helpFlags = false
+		bapiClis.HelpFlags = false
 	}
-	if bapiClis.helpFlags {
+	if bapiClis.HelpFlags {
 		cmd.Help()
 	}
 }
 
 func init() {
-	ncbiCmd.Flags().StringVarP(&bapiClis.ncbiDB, "db", "d", "pubmed", "Db specifies the database to search")
-	ncbiCmd.Flags().IntVarP(&bapiClis.ncbiRetmax, "per-size", "m", 100, "Retmax specifies the number of records to be retrieved per request.")
-	ncbiCmd.Flags().StringVarP(&bapiClis.ncbiXML2json, "xml2json", "", "", "Convert XML files to json [e.g. pubmed].")
-	ncbiCmd.Flags().IntVarP(&bapiClis.thread, "thread", "t", 2, "Thread to process.")
-	ncbiCmd.Flags().StringVarP(&bapiClis.ncbiKeywords, "keywords", "k", "algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org", "Keywords to extracted from abstract.")
-	ncbiCmd.Flags().BoolVarP(&bapiClis.quiet, "quiet", "", false, "No log output.")
-	ncbiCmd.Flags().BoolVarP(&bapiClis.callCor, "call-cor", "", false, "Wheather to calculate the corelated keywords, and return the sentence contains >=2 keywords.")
-	ncbiCmd.Flags().StringVarP(&bapiClis.outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
+	ncbiCmd.Flags().StringVarP(&ncbiClis.NcbiDB, "db", "d", "pubmed", "Db specifies the database to search")
+	ncbiCmd.Flags().IntVarP(&ncbiClis.NcbiRetmax, "per-size", "m", 100, "Retmax specifies the number of records to be retrieved per request.")
+	ncbiCmd.Flags().StringVarP(&ncbiClis.NcbiXMLToJSON, "xml2json", "", "", "Convert XML files to json [e.g. pubmed].")
+	ncbiCmd.Flags().StringVarP(&ncbiClis.NcbiKeywords, "keywords", "k", "algorithm, tool, model, pipleline, method, database, workflow, dataset, bioinformatics, sequencing, http, github.com, gitlab.com, bitbucket.org", "Keywords to extracted from abstract.")
+	ncbiCmd.Flags().IntVarP(&bapiClis.Thread, "thread", "t", 2, "Thread to process.")
+	ncbiCmd.Flags().BoolVarP(&bapiClis.Quiet, "quiet", "", false, "No log output.")
+	ncbiCmd.Flags().BoolVarP(&bapiClis.CallCor, "call-cor", "", false, "Wheather to calculate the corelated keywords, and return the sentence contains >=2 keywords.")
+	ncbiCmd.Flags().StringVarP(&bapiClis.Outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
 
 	ncbiCmd.Example = `  bapi ncbi -d pubmed -q B-ALL --format XML -e your_email@domain.com
   bapi ncbi -q "RNA-seq and bioinformatics[journal]" -e "your_email@domain.com" -m 100 | awk '/<[?]xml version="1.0" [?]>/{close(f); f="abstract.http.XML.tmp" ++c;next} {print>f;}'

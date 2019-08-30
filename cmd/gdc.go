@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"io/ioutil"
-	"os"
-
 	"github.com/Miachol/bapi/fetch"
-	"github.com/openbiox/butils/log"
+	"github.com/Miachol/bapi/types"
 	"github.com/spf13/cobra"
 )
 
-var endp fetch.GdcEndpoints
+var endp types.GdcEndpoints
 
 var gdcCmd = &cobra.Command{
 	Use:   "gdc",
@@ -21,24 +18,19 @@ var gdcCmd = &cobra.Command{
 }
 
 func gdcCmdRunOptions(cmd *cobra.Command) {
-	if bapiClis.quiet {
-		log.SetOutput(ioutil.Discard)
-	} else {
-		log.SetOutput(os.Stderr)
-	}
-	endp.ExtraParams.From = bapiClis.from
-	endp.ExtraParams.Size = bapiClis.size
-	endp.ExtraParams.Format = bapiClis.format
-	endp.ExtraParams.Query = bapiClis.query
-	endp.ExtraParams.Pretty = fmtClis.prettyJSON
+	endp.ExtraParams.From = bapiClis.From
+	endp.ExtraParams.Size = bapiClis.Size
+	endp.ExtraParams.Format = bapiClis.Format
+	endp.ExtraParams.Query = bapiClis.Query
+	endp.ExtraParams.Pretty = fmtClis.PrettyJSON
 	if endp.ExtraParams.JSON {
 		endp.ExtraParams.Format = "json"
 	}
 	if endp.Status || endp.Projects || endp.Cases || endp.Files || endp.Annotations || endp.Data || endp.Manifest || endp.Slicing {
-		fetch.Gdc(&endp, bapiClis.outfn, bapiClis.retries, bapiClis.timeout, bapiClis.retSleepTime, bapiClis.quiet)
-		bapiClis.helpFlags = false
+		fetch.Gdc(&endp, &bapiClis)
+		bapiClis.HelpFlags = false
 	}
-	if bapiClis.helpFlags {
+	if bapiClis.HelpFlags {
 		cmd.Help()
 	}
 }
@@ -59,7 +51,7 @@ func init() {
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Token, "token", "", "", "Token to access GDC.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Sort, "sort", "", "", "Sort parameters.")
 	gdcCmd.Flags().StringVarP(&endp.ExtraParams.Fields, "fields", "", "", "Fields parameters.")
-	gdcCmd.Flags().StringVarP(&bapiClis.outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
+	gdcCmd.Flags().StringVarP(&bapiClis.Outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
 	gdcCmd.Example = `  bapi gdc -p
   bapi gdc -p --json-pretty
   bapi gdc -p -q TARGET-NBL --json-pretty

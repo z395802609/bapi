@@ -8,24 +8,36 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Miachol/bapi/types"
+	cio "github.com/openbiox/butils/io"
 	"github.com/openbiox/butils/log"
+	cnet "github.com/openbiox/butils/net"
 	"github.com/tidwall/pretty"
 )
 
 const Dataset2toolsHost = "http://amp.pharm.mssm.edu/datasets2tools/api/search?"
 
 // Dataset2tools access http://amp.pharm.mssm.edu/datasets2tools/ API
-func Dataset2tools(endpoints *Datasets2toolsEndpoints, outfn string, jsonPretty bool, indent *string, sortKey bool, retries int, timeout int, retSleepTime int, quite bool) {
+func Dataset2tools(endpoints *types.Datasets2toolsEndpoints, bapiClis *types.BapiClisT,
+	fmtClis *types.FmtClisT) {
+	var netopt = &cnet.BnetParams{
+		Pbar: pg,
+	}
+	netopt.Quiet = bapiClis.Quiet
+	netopt.Retries = bapiClis.Retries
+	netopt.Timeout = bapiClis.Timeout
+	netopt.RetSleepTime = bapiClis.RetSleepTime
+	netopt.Proxy = bapiClis.Proxy
 	url := Dataset2toolsHost + setDatasets2toolsQuerySuffix(endpoints)
-	client := newHTTPClient(timeout)
+	client := cnet.NewHTTPClient(bapiClis.Timeout, bapiClis.Proxy)
 	method := "GET"
 	req, err := http.NewRequest(method, url, nil)
-	setReqHeader(req)
+	cnet.SetDefaultReqHeader(req)
 	if err != nil {
 		log.Warn(err)
 	}
 	log.Infof("Query datasets2tools API: %s.", url)
-	resp, err := retryClient(client, req, retries, retSleepTime)
+	resp, err := cnet.RetriesClient(client, req, netopt)
 	if err != nil {
 		return
 	}
@@ -34,12 +46,16 @@ func Dataset2tools(endpoints *Datasets2toolsEndpoints, outfn string, jsonPretty 
 	} else {
 		return
 	}
-	of := creatOutStream(outfn, req.URL.String())
+	of := cio.NewOutStream(bapiClis.Outfn, req.URL.String())
 	buf, _ := ioutil.ReadAll(resp.Body)
-	if jsonPretty {
+	if fmtClis.PrettyJSON {
+		indent := ""
+		for i := 0; i < fmtClis.Indent; i++ {
+			indent = indent + " "
+		}
 		opt := pretty.Options{
-			Indent:   *indent,
-			SortKeys: sortKey,
+			Indent:   indent,
+			SortKeys: fmtClis.SortKeys,
 		}
 		buf = pretty.PrettyOptions(buf, &opt)
 	}
@@ -53,7 +69,7 @@ func Dataset2tools(endpoints *Datasets2toolsEndpoints, outfn string, jsonPretty 
 	return
 }
 
-func setDatasets2toolsQuerySuffix(endpoints *Datasets2toolsEndpoints) (suffix string) {
+func setDatasets2toolsQuerySuffix(endpoints *types.Datasets2toolsEndpoints) (suffix string) {
 	suffixList := []string{}
 	if endpoints.ObjectType != "" {
 		suffixList = append(suffixList, "object_type="+endpoints.ObjectType)

@@ -9,8 +9,9 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/openbiox/butils"
 	"github.com/openbiox/butils/log"
+	"github.com/openbiox/butils/slice"
+	"github.com/openbiox/butils/stringo"
 	prose "gopkg.in/jdkato/prose.v2"
 	xurls "mvdan.cc/xurls/v2"
 )
@@ -84,14 +85,14 @@ func getPubmedFields(keywords []string, s *goquery.Selection, callCor bool) (jso
 	pmid := s.Find("PubmedArticle PubmedData > ArticleIdList > ArticleId[IdType=pubmed]").Text()
 	doi := s.Find("PubmedArticle PubmedData > ArticleIdList > ArticleId[IdType=doi]").Text()
 	abs := s.Find("PubmedArticle MedlineCitation Article Abstract").Text()
-	abs = butils.StrReplaceAll(abs, "\n  *", "\n")
-	abs = butils.StrReplaceAll(abs, "(<[/]AbstractText.*>)|(^\n)|(\n$)", "")
+	abs = stringo.StrReplaceAll(abs, "\n  *", "\n")
+	abs = stringo.StrReplaceAll(abs, "(<[/]AbstractText.*>)|(^\n)|(\n$)", "")
 	title := s.Find("PubmedArticle MedlineCitation Article ArticleTitle").Text()
 	titleAbs := title + "\n" + abs
 	urls := xurls.Relaxed().FindAllString(titleAbs, -1)
 	keywordsPat := strings.Join(keywords, "|")
-	key := butils.StrExtract(titleAbs, keywordsPat, 1000000)
-	key = butils.RemoveRepeatEle(key)
+	key := stringo.StrExtract(titleAbs, keywordsPat, 1000000)
+	key = slice.DropSliceDup(key)
 
 	doc, err := prose.NewDocument(titleAbs)
 	corela := make(map[string]string)
@@ -126,8 +127,8 @@ func getPubmedFields(keywords []string, s *goquery.Selection, callCor bool) (jso
 
 func getKeywordsCorleations(doc *prose.Document, keywordsPat string, corela *map[string]string) {
 	for _, sent := range doc.Sentences() {
-		kStr := butils.StrExtract(sent.Text, keywordsPat, 1000000)
-		kStr = butils.RemoveRepeatEle(kStr)
+		kStr := stringo.StrExtract(sent.Text, keywordsPat, 1000000)
+		kStr = slice.DropSliceDup(kStr)
 		if len(kStr) >= 2 {
 			(*corela)[strings.Join(kStr, "+")] = sent.Text
 		}
