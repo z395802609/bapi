@@ -52,9 +52,6 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&bapiClis.Retries, "retries", "r", 5, "Retry specifies the number of attempts to retrieve the data.")
 	rootCmd.PersistentFlags().IntVarP(&bapiClis.Timeout, "timeout", "", 35, "Set the timeout of per request.")
 	rootCmd.PersistentFlags().IntVarP(&bapiClis.RetSleepTime, "retries-sleep-time", "", 5, "Sleep time after one retry.")
-	rootCmd.PersistentFlags().IntVarP(&fmtClis.Indent, "indent", "", 4, "Control the indent of output json files.")
-	rootCmd.PersistentFlags().BoolVarP(&fmtClis.SortKeys, "sort-keys", "", false, "Control wheather to sort JSON key.")
-	rootCmd.PersistentFlags().BoolVarP(&fmtClis.PrettyJSON, "json-pretty", "", false, "Pretty json files.")
 
 	rootCmd.Version = bapiClis.Version
 }

@@ -32,12 +32,14 @@ func fmtCmdRunOptions(cmd *cobra.Command) {
 		if err != nil {
 			log.Fatal(err)
 		} else if len(result) > 0 {
-			fmtClis.Stdin = result
+			fmtClis.Stdin = &result
 		}
+	} else {
+		fmtClis.Stdin = nil
 	}
 
 	if len(cleanArgs) >= 1 || hasStdin {
-		fmtClis.Files = cleanArgs
+		fmtClis.Files = &cleanArgs
 		runFlag := false
 		if fmtClis.PrettyJSON {
 			format.PrettyJSON(&fmtClis, bapiClis.Thread)
@@ -47,7 +49,7 @@ func fmtCmdRunOptions(cmd *cobra.Command) {
 			runFlag = true
 		}
 		if !runFlag && hasStdin {
-			io.Copy(os.Stdout, bytes.NewBuffer(fmtClis.Stdin))
+			io.Copy(os.Stdout, bytes.NewBuffer(*fmtClis.Stdin))
 		}
 		bapiClis.HelpFlags = false
 	}
@@ -70,6 +72,12 @@ func checkStdInFlag(cmd *cobra.Command) (args []string, hasStdin bool) {
 func init() {
 	fmtCmd.Flags().IntVarP(&bapiClis.Thread, "thread", "t", 1, "Thread to process.")
 	fmtCmd.Flags().BoolVarP(&fmtClis.JSONToSlice, "json-to-slice", "", false, "Convert key-value JSON  to []key-value and easy to export to readable table.")
-	fmtClis.JSON = make(map[int]map[string]interface{})
-	fmtClis.Table = make(map[int][]interface{})
+	fmtCmd.Flags().BoolVarP(&fmtClis.PrettyJSON, "json-pretty", "", false, "Pretty json files.")
+	fmtCmd.Flags().IntVarP(&fmtClis.Indent, "indent", "", 4, "Control the indent of output json files.")
+	fmtCmd.Flags().BoolVarP(&fmtClis.SortKeys, "sort-keys", "", false, "Control wheather to sort JSON key.")
+	fmtCmd.Example = `  bapi ncbi -q "Galectins control MTOR and AMPK in response to lysosomal damage to induce autophagy OR MTOR-independent autophagy induced by interrupted endoplasmic reticulum-mitochondrial Ca2+ communication: a dead end in cancer cells. OR The PARK10 gene USP24 is a negative regulator of autophagy and ULK1 protein stability OR Coordinate regulation of autophagy and the ubiquitin proteasome system by MTOR." | bapi ncbi --xml2json pubmed - | sed 's;}{;,;g' | bapi fmt --json-to-slice --indent 4 -| json2csv -o final.csv`
+	JSON := make(map[int]map[string]interface{})
+	fmtClis.JSON = &JSON
+	Table := make(map[int][]interface{})
+	fmtClis.Table = &Table
 }

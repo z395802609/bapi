@@ -1,9 +1,14 @@
 package cmd
 
 import (
+	"bufio"
+	"io/ioutil"
+	"os"
+
 	"github.com/Miachol/bapi/fetch"
 	"github.com/Miachol/bapi/parse"
 	"github.com/Miachol/bapi/types"
+	"github.com/openbiox/butils/log"
 	"github.com/openbiox/butils/stringo"
 	"github.com/spf13/cobra"
 )
@@ -20,6 +25,17 @@ var ncbiCmd = &cobra.Command{
 }
 
 func ncbiCmdRunOptions(cmd *cobra.Command) {
+	cleanArgs := []string{}
+	var stdin []byte
+	var err error
+	hasStdin := false
+	if cleanArgs, hasStdin = checkStdInFlag(cmd); hasStdin {
+		reader := bufio.NewReader(os.Stdin)
+		stdin, err = ioutil.ReadAll(reader)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	if bapiClis.Format == "" {
 		bapiClis.Format = "XML"
 	}
@@ -28,10 +44,10 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 		bapiClis.HelpFlags = false
 	}
 	if ncbiClis.NcbiXMLToJSON == "pubmed" {
-		if len(cmd.Flags().Args()) >= 1 {
-			ncbiClis.NcbiXMLPaths = append(ncbiClis.NcbiXMLPaths, cmd.Flags().Args()...)
+		if len(cleanArgs) >= 1 || len(stdin) > 0 {
+			ncbiClis.NcbiXMLPaths = append(ncbiClis.NcbiXMLPaths, cleanArgs...)
 			keywordsList := stringo.StrSplit(ncbiClis.NcbiKeywords, ", |,", 10000)
-			parse.ParsePubmedXML(ncbiClis.NcbiXMLPaths, bapiClis.Outfn, keywordsList, bapiClis.Thread, bapiClis.CallCor)
+			parse.ParsePubmedXML(ncbiClis.NcbiXMLPaths, stdin, bapiClis.Outfn, keywordsList, bapiClis.Thread, bapiClis.CallCor)
 		}
 		bapiClis.HelpFlags = false
 	}
@@ -57,7 +73,6 @@ func init() {
   bapi ncbi --xml2json pubmed abstract.http.XML.tmp* -k "${k}" --call-cor | sed 's;}{;,;g' > final.json
 
   bapi ncbi -q "Galectins control MTOR and AMPK in response to lysosomal damage to induce autophagy OR MTOR-independent autophagy induced by interrupted endoplasmic reticulum-mitochondrial Ca2+ communication: a dead end in cancer cells. OR The PARK10 gene USP24 is a negative regulator of autophagy and ULK1 protein stability OR Coordinate regulation of autophagy and the ubiquitin proteasome system by MTOR." -o titleSearch.XML
-  bapi ncbi --xml2json pubmed titleSearch.XML -k "${k}" --call-cor | sed 's;}{;,;g' > final.json
-  bapi fmt --json-to-slice final.json
-  json2csv -i final.slice.json -o final.csv`
+  bapi ncbi --xml2json pubmed titleSearch.XML -k "${k}" --call-cor | sed 's;}{;,;g' | bapi fmt --json-to-slice - > final.json
+  json2csv -i final.json -o final.csv`
 }

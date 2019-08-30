@@ -8,8 +8,8 @@ import (
 
 	"github.com/Miachol/bapi/types"
 	jsoniter "github.com/json-iterator/go"
-	stringo "github.com/openbiox/butils/stringo"
 	"github.com/openbiox/butils/log"
+	stringo "github.com/openbiox/butils/stringo"
 	"github.com/tidwall/pretty"
 )
 
@@ -28,21 +28,21 @@ func PrettyJSON(fmtClis *types.FmtClisT, thread int) {
 		Indent:   indent,
 		SortKeys: fmtClis.SortKeys,
 	}
-	for k, fn := range fmtClis.Files {
+	for k, fn := range *fmtClis.Files {
 		sem <- true
 		go func(fn string, k int) {
 			defer func() {
 				<-sem
 			}()
 			outfn := stringo.StrReplaceAll(fn, "json$", "pretty.json")
-			fmtClis.Files[k] = outfn
+			(*fmtClis.Files)[k] = outfn
 			d, err := ioutil.ReadFile(fn)
 			if err != nil {
 				log.Fatal(err)
 			}
 			d = pretty.PrettyOptions(d, &opt)
 			json.Unmarshal(d, &m)
-			fmtClis.JSON[k] = m
+			(*fmtClis.JSON)[k] = m
 			f, err := os.OpenFile(outfn, os.O_RDWR|os.O_CREATE, 0664)
 			io.Copy(f, bytes.NewBuffer(d))
 		}(fn, k)
@@ -50,12 +50,12 @@ func PrettyJSON(fmtClis *types.FmtClisT, thread int) {
 	for i := 0; i < cap(sem); i++ {
 		sem <- true
 	}
-	if len(fmtClis.Stdin) > 0 {
+	if fmtClis.Stdin != nil {
 		var m2 map[string]interface{}
 		m2 = make(map[string]interface{})
-		json.Unmarshal(fmtClis.Stdin, &m2)
-		d = pretty.PrettyOptions(fmtClis.Stdin, &opt)
-		fmtClis.JSON[-1] = m2
+		json.Unmarshal(*fmtClis.Stdin, &m2)
+		d = pretty.PrettyOptions(*fmtClis.Stdin, &opt)
+		(*fmtClis.JSON)[-1] = m2
 		io.Copy(os.Stdout, bytes.NewBuffer(d))
 	}
 }
@@ -72,7 +72,7 @@ func JSON2Slice(fmtClis *types.FmtClisT, thread int) {
 		Indent:   indent,
 		SortKeys: fmtClis.SortKeys,
 	}
-	for k, fn := range fmtClis.Files {
+	for k, fn := range *(fmtClis.Files) {
 		sem <- true
 		go func(fn string, k int) {
 			defer func() {
@@ -81,11 +81,11 @@ func JSON2Slice(fmtClis *types.FmtClisT, thread int) {
 			var m map[string]interface{}
 			m = make(map[string]interface{})
 			outfn := stringo.StrReplaceAll(fn, "json$", "slice.json")
-			fmtClis.Files[k] = outfn
+			(*fmtClis.Files)[k] = outfn
 			var d []byte
 			var err error
-			if len(fmtClis.JSON[k]) > 0 {
-				m = fmtClis.JSON[k]
+			if len((*fmtClis.JSON)[k]) > 0 {
+				m = (*fmtClis.JSON)[k]
 			} else {
 				d, err = ioutil.ReadFile(fn)
 				if err != nil {
@@ -97,7 +97,7 @@ func JSON2Slice(fmtClis *types.FmtClisT, thread int) {
 			for j = range m {
 				final = append(final, m[j])
 			}
-			fmtClis.Table[k] = final
+			(*fmtClis.Table)[k] = final
 			if j != "" {
 				d, _ = json.Marshal(final)
 				d = pretty.PrettyOptions(d, &opt)
@@ -113,18 +113,18 @@ func JSON2Slice(fmtClis *types.FmtClisT, thread int) {
 	for i := 0; i < cap(sem); i++ {
 		sem <- true
 	}
-	if len(fmtClis.Stdin) > 0 {
+	if fmtClis.Stdin != nil {
 		var m2 map[string]interface{}
 		m2 = make(map[string]interface{})
-		json.Unmarshal(fmtClis.Stdin, &m2)
+		json.Unmarshal(*fmtClis.Stdin, &m2)
 		var final []interface{}
 		var j string
 		for j = range m2 {
 			final = append(final, m2[j])
 		}
-		fmtClis.Table[-1] = final
+		(*fmtClis.Table)[-1] = final
 		if j != "" {
-			d, _ := json.MarshalIndent(final, "", indent)
+			d, _ := json.Marshal(final)
 			d = pretty.PrettyOptions(d, &opt)
 			io.Copy(os.Stdout, bytes.NewBuffer(d))
 		}

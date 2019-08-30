@@ -24,9 +24,12 @@ type PubmedFields struct {
 }
 
 // ParsePubmedXML convert Pubmed XML to json
-func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread int, callCor bool) {
+func ParsePubmedXML(xmlPaths []string, stdin []byte, outfn string, keywords []string, thread int, callCor bool) {
 	if len(xmlPaths) == 1 {
 		thread = 1
+	}
+	if len(stdin) > 0 {
+		xmlPaths = append(xmlPaths, "ParsePubmedXMLStdin")
 	}
 	sem := make(chan bool, thread)
 
@@ -43,21 +46,31 @@ func ParsePubmedXML(xmlPaths []string, outfn string, keywords []string, thread i
 	}
 
 	var buf = &bytes.Buffer{}
+	var err error
 	for i, xmlPath := range xmlPaths {
 		sem <- true
 		go func(xmlPath string, i int) {
+			var htmlDoc *goquery.Document
 			defer func() {
 				<-sem
 			}()
-			xml, err := os.Open(xmlPath)
-			if err != nil {
-				log.Fatal(err)
+			if xmlPath != "ParsePubmedXMLStdin" {
+				xml, err := os.Open(xmlPath)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer xml.Close()
+				htmlDoc, err = goquery.NewDocumentFromReader(xml)
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else if xmlPath == "ParsePubmedXMLStdin" && len(stdin) > 0 {
+				htmlDoc, err = goquery.NewDocumentFromReader(bytes.NewReader(stdin))
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
-			defer xml.Close()
-			htmlDoc, err := goquery.NewDocumentFromReader(xml)
-			if err != nil {
-				log.Fatal(err)
-			}
+
 			htmlDoc.Find("PubmedArticle").Each(func(i int, s *goquery.Selection) {
 				json := getPubmedFields(keywords, s, callCor)
 				io.Copy(buf, bytes.NewBuffer(json))
