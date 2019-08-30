@@ -8,8 +8,8 @@ import (
 
 var dendp types.Datasets2toolsEndpoints
 var dataset2toolsCmd = &cobra.Command{
-	Use:   "dts",
-	Short: "Query dataset2tools website APIs.",
+	Use:   "dta",
+	Short: "Query dataset2tools website APIs: datasets (d), tools (t), and canned analysis (a).",
 	Long:  `Query dataset2tools APIs. More see here https://github.com/Miachol/bapi.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		dataset2toolsCmdRunOptions(cmd)
@@ -39,8 +39,8 @@ func init() {
 	dataset2toolsCmd.Flags().StringVarP(&dendp.Gneset, "geneset", "g", "", "With dataset accession, e.g. upregulated.")
 	dataset2toolsCmd.Flags().StringVarP(&bapiClis.Outfn, "outfn", "o", "", "Out specifies destination of the returned data (default to stdout).")
 
-	dataset2toolsCmd.Example = `  bapi dts -a DCA00000060 --json-pretty
-  bapi dts -s GSE31106 --json-pretty
-  bapi dts --type dataset --json-pretty
-  bapi dts -g upregulated --json-pretty`
+	dataset2toolsCmd.Example = `  bapi dta -a DCA00000060 
+  bapi dta -s GSE31106 | bapi fmt --json-pretty -
+  bapi dta --type dataset | bapi fmt --json-pretty --indent 2 -
+  bapi dta -g upregulated | json2csv -o out.csv`
 }
