@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Miachol/bapi/types"
-	"github.com/cloudfoundry/bytefmt"
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/olekukonko/tablewriter"
 	cio "github.com/openbiox/butils/io"
 	"github.com/openbiox/butils/log"
