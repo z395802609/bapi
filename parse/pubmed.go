@@ -17,19 +17,19 @@ import (
 )
 
 type PubmedFields struct {
-	Pmid, Doi, Title, Abs, Journal, Issue, Volume, Date, Issn string
-	Corelations                                               map[string]string
-	URLs                                                      []string
-	Keywords                                                  []string
+	Pmid, Doi, Title, Abs, Journal, Issue, Volume, Date, Issn *string
+	Corelations                                               *map[string]string
+	URLs                                                      *[]string
+	Keywords                                                  *[]string
 }
 
 // ParsePubmedXML convert Pubmed XML to json
-func ParsePubmedXML(xmlPaths []string, stdin []byte, outfn string, keywords []string, thread int, callCor bool) {
-	if len(xmlPaths) == 1 {
+func ParsePubmedXML(xmlPaths *[]string, stdin *[]byte, outfn string, keywords *[]string, thread int, callCor bool) {
+	if len(*xmlPaths) == 1 {
 		thread = 1
 	}
-	if len(stdin) > 0 {
-		xmlPaths = append(xmlPaths, "ParsePubmedXMLStdin")
+	if len(*stdin) > 0 {
+		*xmlPaths = append(*xmlPaths, "ParsePubmedXMLStdin")
 	}
 	sem := make(chan bool, thread)
 
@@ -45,11 +45,11 @@ func ParsePubmedXML(xmlPaths []string, stdin []byte, outfn string, keywords []st
 		defer of.Close()
 	}
 
-	var buf = &bytes.Buffer{}
 	var err error
-	for i, xmlPath := range xmlPaths {
+	for i, xmlPath := range *xmlPaths {
 		sem <- true
 		go func(xmlPath string, i int) {
+			var buf = &bytes.Buffer{}
 			var htmlDoc *goquery.Document
 			defer func() {
 				<-sem
@@ -64,29 +64,28 @@ func ParsePubmedXML(xmlPaths []string, stdin []byte, outfn string, keywords []st
 				if err != nil {
 					log.Fatal(err)
 				}
-			} else if xmlPath == "ParsePubmedXMLStdin" && len(stdin) > 0 {
-				htmlDoc, err = goquery.NewDocumentFromReader(bytes.NewReader(stdin))
+			} else if xmlPath == "ParsePubmedXMLStdin" && len(*stdin) > 0 {
+				htmlDoc, err = goquery.NewDocumentFromReader(bytes.NewReader(*stdin))
 				if err != nil {
 					log.Fatal(err)
 				}
 			}
 
 			htmlDoc.Find("PubmedArticle").Each(func(i int, s *goquery.Selection) {
-				json := getPubmedFields(keywords, s, callCor)
-				io.Copy(buf, bytes.NewBuffer(json))
+				io.Copy(buf, bytes.NewBuffer(getPubmedFields(keywords, s, callCor)))
 				// fmt.Printf("%s, %s\n%s\n%v\n", pmid, doi, abs, key)
 			})
+			if _, err := io.Copy(of, buf); err != nil {
+				log.Fatal(err)
+			}
 		}(xmlPath, i)
 	}
 	for i := 0; i < cap(sem); i++ {
 		sem <- true
 	}
-	if _, err := io.Copy(of, buf); err != nil {
-		log.Fatal(err)
-	}
 }
 
-func getPubmedFields(keywords []string, s *goquery.Selection, callCor bool) (jsonData []byte) {
+func getPubmedFields(keywords *[]string, s *goquery.Selection, callCor bool) (jsonData []byte) {
 	year := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Year").Text()
 	month := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Month").Text()
 	day := s.Find("PubmedArticle MedlineCitation Article Journal JournalIssue PubDate > Day").Text()
@@ -103,14 +102,14 @@ func getPubmedFields(keywords []string, s *goquery.Selection, callCor bool) (jso
 	title := s.Find("PubmedArticle MedlineCitation Article ArticleTitle").Text()
 	titleAbs := title + "\n" + abs
 	urls := xurls.Relaxed().FindAllString(titleAbs, -1)
-	keywordsPat := strings.Join(keywords, "|")
+	keywordsPat := strings.Join(*keywords, "|")
 	key := stringo.StrExtract(titleAbs, keywordsPat, 1000000)
 	key = slice.DropSliceDup(key)
 
 	doc, err := prose.NewDocument(titleAbs)
 	corela := make(map[string]string)
 	if len(key) > 2 && callCor {
-		getKeywordsCorleations(doc, keywordsPat, &corela)
+		getKeywordsCorleations(doc, &keywordsPat, &corela)
 	}
 	if err != nil {
 		log.Warn(err)
@@ -121,26 +120,26 @@ func getPubmedFields(keywords []string, s *goquery.Selection, callCor bool) (jso
 
 	obj := make(map[string]PubmedFields)
 	obj[pmid] = PubmedFields{
-		Pmid:        pmid,
-		Doi:         doi,
-		Title:       title,
-		Abs:         abs,
-		Journal:     journal,
-		Issn:        issn,
-		Date:        date,
-		Issue:       issue,
-		Volume:      volume,
-		Corelations: corela,
-		URLs:        urls,
-		Keywords:    key,
+		Pmid:        &pmid,
+		Doi:         &doi,
+		Title:       &title,
+		Abs:         &abs,
+		Journal:     &journal,
+		Issn:        &issn,
+		Date:        &date,
+		Issue:       &issue,
+		Volume:      &volume,
+		Corelations: &corela,
+		URLs:        &urls,
+		Keywords:    &key,
 	}
 	jsonData, _ = json.MarshalIndent(obj, "", "  ")
 	return jsonData
 }
 
-func getKeywordsCorleations(doc *prose.Document, keywordsPat string, corela *map[string]string) {
+func getKeywordsCorleations(doc *prose.Document, keywordsPat *string, corela *map[string]string) {
 	for _, sent := range doc.Sentences() {
-		kStr := stringo.StrExtract(sent.Text, keywordsPat, 1000000)
+		kStr := stringo.StrExtract(sent.Text, *keywordsPat, 1000000)
 		kStr = slice.DropSliceDup(kStr)
 		if len(kStr) >= 2 {
 			(*corela)[strings.Join(kStr, "+")] = sent.Text
