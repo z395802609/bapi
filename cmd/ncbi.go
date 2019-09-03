@@ -47,7 +47,7 @@ func ncbiCmdRunOptions(cmd *cobra.Command) {
 		if len(cleanArgs) >= 1 || len(stdin) > 0 {
 			ncbiClis.NcbiXMLPaths = append(ncbiClis.NcbiXMLPaths, cleanArgs...)
 			keywordsList := stringo.StrSplit(ncbiClis.NcbiKeywords, ", |,", 10000)
-			parse.ParsePubmedXML(&ncbiClis.NcbiXMLPaths, &stdin, bapiClis.Outfn, &keywordsList, bapiClis.Thread, bapiClis.CallCor)
+			parse.PubmedXML(&ncbiClis.NcbiXMLPaths, &stdin, bapiClis.Outfn, &keywordsList, bapiClis.Thread, bapiClis.CallCor)
 		}
 		bapiClis.HelpFlags = false
 	}

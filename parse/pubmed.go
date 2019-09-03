@@ -23,8 +23,8 @@ type PubmedFields struct {
 	Keywords                                                  *[]string
 }
 
-// ParsePubmedXML convert Pubmed XML to json
-func ParsePubmedXML(xmlPaths *[]string, stdin *[]byte, outfn string, keywords *[]string, thread int, callCor bool) {
+// PubmedXML convert Pubmed XML to json
+func PubmedXML(xmlPaths *[]string, stdin *[]byte, outfn string, keywords *[]string, thread int, callCor bool) {
 	if len(*xmlPaths) == 1 {
 		thread = 1
 	}
@@ -49,7 +49,6 @@ func ParsePubmedXML(xmlPaths *[]string, stdin *[]byte, outfn string, keywords *[
 	for i, xmlPath := range *xmlPaths {
 		sem <- true
 		go func(xmlPath string, i int) {
-			var buf = &bytes.Buffer{}
 			var htmlDoc *goquery.Document
 			defer func() {
 				<-sem
@@ -72,12 +71,9 @@ func ParsePubmedXML(xmlPaths *[]string, stdin *[]byte, outfn string, keywords *[
 			}
 
 			htmlDoc.Find("PubmedArticle").Each(func(i int, s *goquery.Selection) {
-				io.Copy(buf, bytes.NewBuffer(getPubmedFields(keywords, s, callCor)))
+				io.Copy(of, bytes.NewBuffer(getPubmedFields(keywords, s, callCor)))
 				// fmt.Printf("%s, %s\n%s\n%v\n", pmid, doi, abs, key)
 			})
-			if _, err := io.Copy(of, buf); err != nil {
-				log.Fatal(err)
-			}
 		}(xmlPath, i)
 	}
 	for i := 0; i < cap(sem); i++ {
